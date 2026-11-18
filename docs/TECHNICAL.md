@@ -1,245 +1,214 @@
-# Catatan Teknis — Reverse Tethering RNDIS
+# Catatan Teknis — Reverse Tethering RNDIS (universal)
 
-Catatan mendetail hasil eksperimen di **Android device (device)**, Android 17, APatch, Windows 10 Pro 19045.
-
----
-
-## 1. Temuan perangkat
-
-```text
-ro.product.model      = Android device
-ro.product.device     = device
-ro.build.version.release = 17
-ro.build.version.sdk  = 37
-persist.sys.usb.config = adb
-sys.usb.configfs       = 2
-vendor.usb.use_gadget_hal = 1
-vendor.usb.controller  = <udc>
-vendor.usb.rndis.func.name = gsi
-persist.vendor.usb.config.extra = none
-```
-
-Root: APatch (`/data/adb/ap/bin/resetprop`, `su --help` menampilkan "APatch"). Opsi `su -Z/--context` **diabaikan**, jadi context tetap `u:r:shell:s0`.
+Dokumen ini menjelaskan **mekanisme umum** yang dipakai repo, bukan konfigurasi
+khusus satu model HP. Nilai perangkat (UDC, VID/PID, nama antarmuka, dll.)
+**dideteksi saat runtime** oleh `tools/rndis_setup.sh` dan `tools/ics.ps1`.
+Contoh hasil dari satu perangkat ada di lampiran di bawah sebagai referensi.
 
 ---
 
-## 2. Kenapa `setprop sys.usb.config` gagal
+## 1. Ide dasar
 
-```text
-init: Unable to set property 'sys.usb.config' from uid:0 ...
-SELinux permission check failed
-  scontext=u:r:shell:s0
-  tcontext=u:object_r:usb_control_prop:s0
-```
+Android modern (14+) mengabaikan trik DNS lama:
 
-Meski `uid=0`, context shell tidak diizinkan menulis `usb_control_prop`. `resetprop` dari APatch juga tidak memicu init reconfigure.
-
-Selain itu, blok init untuk `rndis,adb` di `/vendor/etc/init/hw/init.qcom.usb.rc` bersyarat `sys.usb.configfs=1`:
-
-```text
-on property:sys.usb.ffs.ready=1 && property:sys.usb.config=rndis,none,adb && property:sys.usb.configfs=1
-    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "rndis_adb"
-    write /config/usb_gadget/g1/idVendor 0x05C6
-    write /config/usb_gadget/g1/idProduct 0x9024
-    symlink .../functions/${vendor.usb.rndis.func.name}.rndis .../configs/b.1/f1
-    symlink .../functions/ffs.adb .../configs/b.1/f2
-    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
-```
-
-Karena perangkat memakai `configfs=2` (gadget HAL), blok ini **never dieksekusi**. Itulah sebabnya konfigurasi dilakukan manual lewat configfs.
-
-Nilai VID/PID `05C6:9024` diambil persis dari blok tersebut → Windows mengenalinya sebagai **Remote NDIS Compatible Device** + **ADB Interface** (MI_00 / MI_02) tanpa driver tambahan.
-
----
-
-## 3. Fungsi configfs yang tersedia
-
-```text
-/config/usb_gadget/g1/functions/
-  ffs.adb, ffs.mtp, ffs.ptp, ...
-  gsi.rmnet
-  gsi.rndis      <-- dipakai
-  ncm.gs6
-  rndis.rndis, rndis_bam.rndis
-  mass_storage.0, diag.diag, ...
-```
-
-Struktur konfigurasi aktif:
-
-```text
-/config/usb_gadget/g1/configs/b.1/
-  function0 -> ../../../../usb_gadget/g1/functions/ffs.adb   (awal)
-  f1 -> ../../../../usb_gadget/g1/functions/gsi.rndis         (setelah diubah)
-  f2 -> ../../../../usb_gadget/g1/functions/ffs.adb
-```
-
-Catatan penting: symlink function berada **langsung di `b.1/`**, bukan di `b.1/functions/`. Target relatif `../../../../usb_gadget/g1/functions/...` dihitung dari `b.1/`. Membuat symlink dengan path absolut juga berhasil dan dinormalisasi configfs menjadi bentuk relatif tersebut.
-
-Prosedur rebind harus dijalankan sebagai **proses lokal di HP** (background), karena ADB putus saat UDC di-unbind:
-
-```sh
-echo "" > /config/usb_gadget/g1/UDC
-sleep 3
-echo <udc> > /config/usb_gadget/g1/UDC
-```
-
----
-
-## 4. Windows: ICS lewat COM
-
-`New-NetNat` tidak tersedia di build ini (`MSFT_NetNat` class "Not found" / "Invalid class"), begitu juga fitur RRAS. Satu-satunya jalan: **ICS (Internet Connection Sharing)**.
-
-Di PowerShell, `HNetCfg.HNetShare` sulit dipakai (method `EnumConnections` tidak terekspos). Memakai **VBScript** dengan late binding berhasil:
-
-```vbscript
-Set netshare = CreateObject("HNetCfg.HNetShare.1")
-Set col = netshare.EnumEveryConnection
-For Each conn In col
-    Set props = netshare.NetConnectionProps(conn)
-    If props.Name = "Ethernet" Then Set pub = conn
-    If props.Name = "Ethernet 2" Then Set priv = conn
-Next
-netshare.INetSharingConfigurationForINetConnection(pub).EnableSharing 0
-netshare.INetSharingConfigurationForINetConnection(priv).EnableSharing 1
-```
-
-Nilai `EnableSharing` **counter-intuitive**: public = `0`, private = `1` (dokumentasi/implementasi di build ini). Percobaan dengan public=`1`, private=`2` menghasilkan error:
-
-```text
-An operation is blocked waiting for an oplock.
-```
-
-Service `SharedAccess` awalnya **Disabled** → diaktifkan otomatis oleh script.
-
----
-
-## 5. Masalah DNS di Android 14+
-
-Semua cara lama **tidak berfungsi** di Android 17:
-
-| Cara | Hasil |
+| Cara lama | Hasil umum |
 |---|---|
-| `setprop net.dns1 192.168.137.1` | Properti berubah, tapi resolver mengabaikan |
+| `setprop net.dns1 ...` | Properti berubah, resolver mengabaikan |
 | `ANDROID_DNS_MODE=local` | Tidak membantu |
-| `ndc resolver setnetdns ...` | `500 0 Command not recognized` |
-| `cmd resolver ...` | Hanya "Rotation Resolver", bukan DNS config |
-| `ndc network default set ...` | `400 0 setDefaultNetwork() failed` |
-| `service call dnsresolver ...` | Butuh Parcel `DnsConfigParcel`, tidak bisa dibangun dari `service call` |
+| `ndc resolver setnetdns ...` | Perintah dihapus / `Command not recognized` |
+| `iptables` DNAT port 53 | Jalan, tapi bergantung jaringan seluler tetap hidup |
 
-Referensi: [XDA — Has Android 14 crippled the ndc command?](https://xdaforums.com/t/has-android-14-crippled-the-ndc-command.4645821/)
+Solusinya: **jangan mengatur DNS manual**. Buat Android melihat koneksi ini sebagai
+**Ethernet**, maka DHCP akan memberikan IP + DNS secara otomatis dan Android
+mendaftarkan jaringan dengan kapabilitas `INTERNET`, `NOT_VPN`, `VALIDATED`.
 
-### Workaround pertama (ditinggalkan)
+Rantai mereka:
 
-Karena DNS query carrier itu IPv4 (`112.215.198.248/254`), query dialihkan dengan iptables:
+```
+PC internet ──(ICS / NAT)── RNDIS gadget ── usbN/ethN ── Android EthernetTracker
+                                                    └─ DHCP 192.168.137.x
+                                                    └─ DNS  192.168.137.1
+```
+
+---
+
+## 2. Deteksi sisi Android
+
+Script `rndis_setup.sh` tidak mengandung konstanta perangkat.
+
+### 2.1 Gadget & config node
+
+```
+/config/usb_gadget/*        -> pilih yang punya configs/ dan functions/
+$G/configs/*                -> config node aktif (biasanya b.1)
+$G/functions/*              -> cari fungsi rndis* dan *adb*
+```
+
+Prioritas nama fungsi RNDIS: `gsi.rndis`, `rndis`, `rndis.rndis`,
+`rndis_bam.rndis`, `f_rndis`, `rndis.gs`, lalu fallback apa pun yang mengandung
+`rndis`. Untuk ADB: `ffs.adb`, `adb`, `function_adb`.
+
+### 2.2 UDC
+
+```
+cat $G/UDC                  -> nilai saat ini (paling akurat)
+ls /sys/class/udc | head -1 -> fallback
+```
+
+### 2.3 VID/PID
+
+Nilai `idVendor`/`idProduct` yang sudah ada **dipertahankan**. RNDIS adalah class
+USB, sehingga Windows memuat driver *Remote NDIS Compatible Device* berdasarkan
+interface class, bukan VID/PID tertentu.
+
+### 2.4 Rebind
 
 ```sh
-iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination 192.168.137.1:53
-iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination 192.168.137.1:53
-ip rule add from all lookup main pref 15000
-ip route add default via 192.168.137.1 dev rndis0 onlink
+echo "" > $G/UDC
+sleep 2
+echo "$UDC" > $G/UDC
 ```
 
-Ini **berhasil**, tetapi bergantung pada jaringan internet seluler tetap aktif supaya resolver punya server DNS. Ketika jaringan itu turun, resolver beralih ke DNS IPv6 IMS (`2400:9800:2:2::245`) dan DNAT IPv4 tidak kena → DNS mati.
+Ini harus dijalankan **di dalam HP sebagai background process**, karena koneksi
+ADB putus sejenak saat UDC di-unbind. Setelah itu script menunggu antarmuka
+`rndis*`, `usb*`, atau `eth*` muncul maksimal 40 detik.
 
-### Solusi final: jadikan jaringan Ethernet
+---
 
-`dumpsys ethernet` menunjukkan:
+## 3. Deteksi antarmuka & EthernetTracker
 
-```text
-Ethernet State: enabled
-Ethernet interface name filter: (usb|eth)\d+
+Beberapa ROM hanya mengenali nama antarmuka yang cocok dengan filter
+EthernetTracker (umumnya `(usb|eth)\d+`). Script:
+
+1. Memakai antarmuka yang muncul.
+2. Cek `dumpsys connectivity` untuk baris dengan
+   `InterfaceName: <if>` **dan** `Transports: ETHERNET`.
+3. Jika belum terdaftar, rename ke `usb0`, `usb1`, … atau `eth0`, `eth1`, …
+   (nama kosong pertama), lalu cek lagi.
+
+Nama lama yang "stale" tidak bisa dihapus lewat `ip link del` pada netdev gadget,
+makanya script mencari nama kosong berikutnya, bukan selalu `usb0`.
+
+Urutan pemilihan nama sengaja **`usb1…usb7` dulu, `usb0` terakhir**. Pada sebagian
+ROM, `usb0` ditandai sebagai *"Interface used for tethering"* sehingga Android
+menjalankan sisi server tethering, bukan DHCP client — akibatnya tidak pernah
+mendapat IP dari ICS. Memakai `usb1`/`usb2` menghindari konflik ini dan tetap cocok
+dengan filter `(usb|eth)\d+`.
+
+DHCP ditunggu dengan loop sampai `ip -o addr show dev <if>` menghasilkan alamat
+IPv4 — bukan `sleep` tetap.
+
+---
+
+## 4. Deteksi sisi Windows (ICS)
+
+`New-NetNat` sering tidak tersedia; satu-satunya jalan adalah ICS lewat COM
+`HNetCfg.HNetShare.1`. Script `tools/ics.ps1`:
+
+- **Public adapter**: `Get-NetRoute 0.0.0.0/0` dengan metrik terendah
+  (fallback: adapter `Up` pertama yang bukan RNDIS). Bisa dioverride `-PublicName`.
+- **Private adapter**: `Get-NetAdapter` dengan deskripsi/nama `RNDIS|Remote NDIS`
+  (fallback: kosong saat disable). Bisa dioverride `-PrivateName`.
+- Mapping ke `EnumEveryConnection` + `NetConnectionProps($conn).Name`.
+
+Nilai `EnableSharing` counter-intuitive di Windows:
+
+```
+EnableSharing(0) = public (internet)
+EnableSharing(1) = private (dibagikan)
+DisableSharing() = matikan
 ```
 
-Jadi `rndis0` di-rename menjadi `usb0`. Catatan: antarmuka `usb0` dari sesi sebelumnya tidak bisa dihapus lewat `ip link del` (netdev gadget mengembalikan `Operation not supported`), sehingga script memilih nama kosong berikutnya (`usb1`, `usb2`, ...) — filter `(usb|eth)\d+` tetap cocok. Contoh kasus nyata: `usb1` mendapat DHCP `192.168.137.163` dan DNS `192.168.137.1`.
+Service `SharedAccess` diatur ke `Manual` + `Running` saat enable, dan
+**sengaja tidak dinonaktifkan** saat restore.
 
-```sh
-ip link set rndis0 down
-ip link set rndis0 name usb0
-ip link set usb0 up
+Apabila adapter RNDIS belum muncul sebagai *Remote NDIS Compatible Device*,
+periksa VID/PID/function gadget di log HP dan driver Windows.
+
+---
+
+## 5. ADB & otorisasi
+
+- ADB dicari berurutan: `tools/platform-tools/`, `PATH`, `%USERPROFILE%\platform-tools`,
+  `C:\platform-tools`, `%ProgramFiles%\platform-tools`.
+- Serial: argumen CLI → `ANDROID_SERIAL` → `DEVICE_SERIAL` → perangkat pertama
+  dengan status `device`.
+- Setelah UDC di-rebind, Android bisa menganggap koneksi sebagai host baru dan
+  memunculkan dialog *Allow USB debugging*. Script menunggu status `unauthorized`
+  hilang maksimal ~1 menit. Biasanya cukup tekan *Allow* sekali.
+
+Kunci ADB tersimpan di `%USERPROFILE%\.android\adbkey{,.pub}` dan tetap stabil
+walau server ADB di-restart (`adb kill-server && adb start-server`).
+
+---
+
+## 6. Dampak & revert
+
+| Objek | Sifat | Revert |
+|---|---|---|
+| configfs symlink / UDC / VID-PID | Runtime | Reboot HP atau `restore-default.cmd` |
+| Interface `usbN` + IP DHCP | Runtime | Cabut kabel / reboot HP |
+| SELinux permissive | Runtime, sebentar | Dikembalikan ke nilai awal oleh script |
+| ICS sharing | Persisten sampai dimatikan | `restore-default.cmd` |
+| Service `SharedAccess` | Manual/Running | Dibiarkan (tidak di-disable) |
+| File `/data/local/tmp/rndis_setup.*` | Sementara | Dihapus `restore-default.cmd` |
+| Data seluler | Tidak disentuh | — |
+| Gnirehtet / `tun0` (opsional) | Sesuai pemakaian | Hentikan proses / uninstall app |
+
+Tidak menyentuh `/system`, `/vendor`, sepolicy, `build.prop`, atau modul root.
+
+---
+
+## 7. Batasan kompatibilitas
+
+- Perangkat wajib punya configfs USB gadget dan fungsi RNDIS. Beberapa ROM hanya
+  menyediakan `ncm`/`ecm` — belum didukung script ini.
+- Filter EthernetTracker berbeda-beda; mekanisme rename `usbN`/`ethN` mencakup
+  yang umum, tapi perlu disesuaikan bila ROM memakai pola lain
+  (cek `dumpsys ethernet`).
+- Beberapa gadget HAL mengulang konfigurasi saat jaringan berubah sehingga ADB
+  bisa `offline`/`unauthorized` sementara — sudah di-handle dengan retry.
+- Gnirehtet (fallback) memakai `TRANSPORT_VPN`, lebih sering bermasalah di Play
+  Store dan tidak disarankan.
+
+---
+
+## Lampiran A — Contoh hasil deteksi (referensi, bukan konstanta)
+
+Perangkat yang dipakai saat pengembangan awal: Android 17, USB Gadget HAL
+(`configfs=2`), controller `<udc>`, fungsi `gsi.rndis` + `ffs.adb`.
+Contoh log:
+
+```
+gadget=/config/usb_gadget/g1
+config=/config/usb_gadget/g1/configs/b.1
+rndis_fn=gsi.rndis
+adb_fn=ffs.adb
+udc=<udc>
+vidpid=0x05C6:0x9024 (dipertahankan)
+antarmuka=usb0
+addr=192.168.137.151/24
+dns=DnsAddresses: [ /192.168.137.1 ]
+ethernet=yes
 ```
 
-Android otomatis:
-- Mendeteksi `usb0` lewat `EthernetTracker`
-- Menjalankan DHCP client → IP `192.168.137.51/24`
-- Menerima DNS `192.168.137.1` dari ICS Windows
-- Mendaftarkan NetworkAgent dengan kapabilitas:
+Contoh NetworkAgent:
 
-```text
+```
 ni{Ethernet CONNECTED ...}
 Transports: ETHERNET
-Capabilities: NOT_METERED & INTERNET & INTERNET & NOT_RESTRICTED & TRUSTED & NOT_VPN & VALIDATED
+Capabilities: NOT_METERED & INTERNET & NOT_RESTRICTED & TRUSTED & NOT_VPN & VALIDATED
 DnsAddresses: [ /192.168.137.1 ]
 Routes: [ 0.0.0.0/0 -> 192.168.137.1 usb0 ]
 ```
 
-Keuntungan:
-- DNS diatur sendiri oleh Android (tidak ada `net.dns1`, tidak ada iptables)
-- Play Store melihat `TRANSPORT_ETHERNET`, bukan VPN → tidak diblokir
-- **Data seluler tidak diperlukan** sama sekali
-- Semua protokol IP (ICMP termasuk) lewat kernel
+Nilai-nilai di atas **hanya contoh**. Script tidak menuliskan nilai apa pun di atas sebagai konstanta.
 
 ---
 
-## 6. Instabilitas ADB
-
-Setiap kali jaringan/data seluler berubah, USB Gadget HAL (`configfs=2`) mengulang konfigurasi gadget dan kadang menghilangkan interface ADB/RNDIS. Gejala:
-
-```text
-(no serial number)    offline
-```
-
-Pemulihan: re-enumerasi PnP device ADB (lihat README → Troubleshooting). Ini sudah diotomatisasi di `rndis-tethering.cmd`.
-
----
-
-## 7. Dampak perubahan
-
-### HP
-
-| Perubahan | Sifat | Cara revert |
-|---|---|---|
-| App `com.genymobile.gnirehtet` terpasang | Persisten | Uninstall via Settings |
-| `appops ACTIVATE_VPN: allow` | Persisten | Hilang saat app di-uninstall |
-| `mobile_data = 1` | Persisten | Ubah di Settings / `settings put global mobile_data 0` |
-| 20 script di `/data/local/tmp/*.sh` | Persisten (temporary dir) | `adb shell rm /data/local/tmp/*.sh` |
-| configfs VID/PID + symlink | Runtime | Reboot |
-| `rndis0` → `usb0` + IP DHCP | Runtime | Cabut kabel / reboot |
-| SELinux Permissive (saat setup) | Runtime | Dikembalikan ke Enforcing oleh script |
-| iptables / ip rule (percobaan awal) | Runtime | Sudah dihapus saat pindah ke metode `usb0` |
-| `tun0` Gnirehtet | Runtime | `gnirehtet stop` |
-
-**Tidak disentuh:** `/system`, `/vendor`, `/product`, boot image, modul Magisk/APatch, sepolicy, `build.prop`, permission file sistem.
-
-### Windows
-
-| Perubahan | Awal → Sekarang | Cara revert |
-|---|---|---|
-| Service `SharedAccess` | Disabled → Automatic/Running | `restore-default.cmd` |
-| ICS sharing `Ethernet` → `Ethernet 2` | Off → On | `restore-default.cmd` |
-| Service `WinNat` | Manual → Running | Berhenti sendiri / `Stop-Service WinNat` |
-| IP `192.168.137.1` di adapter RNDIS | — | Hilang saat kabel dicabut |
-| File proyek di folder kerja | — | Hapus folder |
-| Log/screenshot di `%TEMP%\opencode` | — | Hapus manual |
-
-**Tidak berubah:** IP adapter Ethernet utama tetap DHCP `192.168.1.104`, tidak install driver, tidak edit `hosts`.
-
----
-
-## 8. Ringkasan urutan eksperimen
-
-1. Gnirehtet v2.5.1 (Rust win64) via ADB → VPN jalan, tapi Play Store bermasalah.
-2. Coba RNDIS manual: SELinux blok `sys.usb.config` → configfs langsung.
-3. `rndis0` muncul, Windows dapat "Remote NDIS Compatible Device" setelah VID/PID diubah ke `05C6:9024`.
-4. ICS aktif via VBScript → IP connectivity + HTTPS jalan.
-5. DNS gagal karena `net.dns1`/`ndc` tidak berfungsi di Android 17.
-6. DNAT port 53 ke ICS DNS → DNS jalan, tapi bergantung data seluler.
-7. **Rename `rndis0` → `usb0`** → Android daftarkan Ethernet, DNS otomatis, Play Store jalan tanpa data seluler. ✅
-
----
-
-## 9. Referensi
+## Referensi
 
 - [Gnirehtet — Genymobile](https://github.com/Genymobile/gnirehtet)
-- [XDA: Android 14 crippled ndc command](https://xdaforums.com/t/has-android-14-crippled-the-ndc-command.4645821/)
-- AOSP: DNS Resolver module — `source.android.com/docs/core/ota/modular-system/dns-resolver`
-- `/vendor/etc/init/hw/init.qcom.usb.rc` (perangkat)
+- [XDA: Has Android 14 crippled the ndc command?](https://xdaforums.com/t/has-android-14-crippled-the-ndc-command.4645821/)
+- AOSP DNS Resolver module — `source.android.com/docs/core/ota/modular-system/dns-resolver`
+- Android configfs gadget docs — `source.android.com/docs/core/connect/usb-gadget`

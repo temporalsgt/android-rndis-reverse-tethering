@@ -1,2 +1,10 @@
 # Script shell harus LF, walaupun checkout di Windows (core.autocrlf=true)
 *.sh text eol=lf
+
+# Script Windows
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Teks
+*.md text eol=lf
+*.vbs text eol=crlf
