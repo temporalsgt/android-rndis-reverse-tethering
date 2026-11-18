@@ -28,4 +28,4 @@ echo Selesai.
 echo Untuk HP: cabut kabel atau reboot - USB kembali ke mode 'adb'
 echo (persist.sys.usb.config = adb).
 echo.
-pause
+ping -n 4 127.0.0.1 >nul

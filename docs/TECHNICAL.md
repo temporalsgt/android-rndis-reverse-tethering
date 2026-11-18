@@ -150,7 +150,7 @@ Ethernet State: enabled
 Ethernet interface name filter: (usb|eth)\d+
 ```
 
-Jadi `rndis0` di-rename menjadi `usb0`:
+Jadi `rndis0` di-rename menjadi `usb0`. Catatan: antarmuka `usb0` dari sesi sebelumnya tidak bisa dihapus lewat `ip link del` (netdev gadget mengembalikan `Operation not supported`), sehingga script memilih nama kosong berikutnya (`usb1`, `usb2`, ...) — filter `(usb|eth)\d+` tetap cocok. Contoh kasus nyata: `usb1` mendapat DHCP `192.168.137.163` dan DNS `192.168.137.1`.
 
 ```sh
 ip link set rndis0 down

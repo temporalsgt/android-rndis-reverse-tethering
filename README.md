@@ -82,7 +82,7 @@ Script akan:
 2. Aktifkan service ICS Windows
 3. Kirim & jalankan `tools/rndis_setup.sh` di HP sebagai root
 4. Konfigurasi gadget USB jadi RNDIS + ADB
-5. Rename `rndis0` → `usb0`
+5. Rename `rndis0` → `usb0` / `usb1` (nama kosong pertama)
 6. Aktifkan ICS `Ethernet` → `Ethernet 2`
 7. Verifikasi `usb0` + `play.google.com`
 
@@ -102,7 +102,7 @@ Output yang diharapkan: `usb0` dapat IP `192.168.137.x`, DNS `192.168.137.1`, HT
 
 1. **Configfs USB** diubah jadi `gsi.rndis` + `ffs.adb`, VID/PID `05C6:9024` (nilai ini diambil dari `init.qcom.usb.rc` ROM untuk komposisi `rndis_adb`).
 2. UDC `<udc>` di-unbind lalu di-bind ulang agar gadget aktif.
-3. Antarmuka `rndis0` **di-rename jadi `usb0`**.
+3. Antarmuka `rndis0` **di-rename jadi `usb0`** (atau `usb1` kalau `usb0` masih dipakai antarmuka stale dari sesi sebelumnya).
 4. ROM memiliki filter `EthernetTracker: (usb|eth)\d+`, sehingga `usb0` dikenali sebagai **jaringan Ethernet**.
 5. Android menjalankan DHCP → dapat IP `192.168.137.51` dari ICS Windows.
 6. Android mendaftarkan Network dengan DNS `192.168.137.1`, kapabilitas `NOT_VPN`, `INTERNET`, `VALIDATED`.
