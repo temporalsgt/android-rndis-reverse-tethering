@@ -1,0 +1,2 @@
+# Script shell harus LF, walaupun checkout di Windows (core.autocrlf=true)
+*.sh text eol=lf
