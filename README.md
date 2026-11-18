@@ -30,75 +30,34 @@ Metode fallback Gnirehtet (VPN) opsional; binary tidak ikut ter-clone.
 
 ---
 
-## Mulai dari nol (belum punya repo)
+## Dapatkan file repo (tanpa Git juga bisa)
 
-Bagian ini untuk PC yang **belum** punya folder repo ini sama sekali.
+Cara paling gampang: **Download ZIP** — tidak perlu install Git, GitHub CLI, atau login.
 
-### 1. Cek / pasang Git dan GitHub CLI
+1. Buka <https://github.com/temporalsgt/android-rndis-reverse-tethering>
+2. Klik tombol hijau **<> Code** → **Download ZIP**.
+3. Ekstrak ke folder mana pun, misalnya `C:\Users\<Anda>\Documents\Android-RNDIS`.
 
-```cmd
-git --version
-gh --version
-```
-
-Kalau belum ada, pasang lewat winget:
+Kalau sudah punya Git dan lebih suka clone:
 
 ```cmd
-winget install --id Git.Git -e
-winget install --id GitHub.cli -e
-```
-
-Tutup dan buka lagi terminal setelah instalasi agar `PATH` terisi.
-
-### 2. Login GitHub
-
-```cmd
-gh auth login
-```
-
-Pilih: **GitHub.com → HTTPS → Login with a web browser**. Akan muncul kode sekali pakai;
-buka `https://github.com/login/device`, masukkan kode, lalu tekan *Authorize*.
-Cek hasilnya:
-
-```cmd
-gh auth status
-```
-
-Harus muncul `✓ Logged in to github.com account <username>`.
-
-### 3. Clone repo
-
-```cmd
-cd /d C:\Users\<Anda>\Documents\<folder kerja>
 git clone https://github.com/temporalsgt/android-rndis-reverse-tethering.git
-cd android-rndis-reverse-tethering
 ```
 
-Kalau folder sudah ada dari sesi sebelumnya, jangan clone ulang — cukup:
+Itu saja — **tidak perlu** `gh auth login` atau `git pull` untuk memakai repo ini.
 
-```cmd
-cd /d <path>\android-rndis-reverse-tethering
-git pull
-```
+### ADB
 
-### 4. Siapkan ADB (binary tidak ikut ter-clone)
-
-Download *SDK Platform Tools*:
-<https://developer.android.com/tools/releases/platform-tools>
-
-Ekstrak, lalu taruh `adb.exe` di salah satu lokasi:
-
-- `tools\platform-tools\adb.exe` di dalam repo, **atau**
-- `%USERPROFILE%\platform-tools\adb.exe`, **atau**
-- tambahkan folder platform-tools ke `PATH`.
-
-Cek:
+Binary ADB tidak ikut di ZIP. Cek dulu:
 
 ```cmd
 adb version
 ```
 
-### 5. Lanjut ke bagian "Cara pakai" di bawah.
+Kalau belum ada, download *SDK Platform Tools*:
+<https://developer.android.com/tools/releases/platform-tools>
+
+Ekstrak, lalu letakkan `adb.exe` di `tools\platform-tools\` atau `%USERPROFILE%\platform-tools\`.
 
 ---
 
