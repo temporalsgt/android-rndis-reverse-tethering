@@ -34,7 +34,7 @@ if not defined SERIAL (
 set "GNIREHTET_DIR=%BASE%gnirehtet\gnirehtet-rust-win64"
 if not exist "%GNIREHTET_DIR%\gnirehtet.exe" (
   echo ERROR: gnirehtet.exe tidak ditemukan di %GNIREHTET_DIR%
-  echo DownloadGnirehtet lalu ekstrak ke folder tersebut, atau pakai rndis-tethering.cmd.
+  echo Download Gnirehtet lalu ekstrak ke folder tersebut, atau pakai rndis-tethering.cmd.
   exit /b 1
 )
 

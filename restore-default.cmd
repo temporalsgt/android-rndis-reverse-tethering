@@ -44,15 +44,23 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%BASE%tools\ics.ps1" -Actio
 rem ---- Service SharedAccess sengaja DIBIARKAN (Manual). Jangan dimatikan permanen. ----
 
 echo [2/4] Turunkan antarmuka RNDIS di HP...
-for %%I in (usb0 usb1 usb2 usb3 usb4 usb5 eth0 eth1 eth2 rndis0 rndis1) do (
-  %ADB% shell "su -c 'ip link set %%I down'" >nul 2>&1
+set "IF="
+for /f "tokens=2 delims==" %%I in ('%ADB% shell "grep -m1 antarmuka= /data/local/tmp/rndis_setup.log 2^>nul"') do set "IF=%%I"
+if defined IF (
+  echo Menurunkan %IF% ...
+  %ADB% shell "su -c 'ip link set %IF% down'" >nul 2>&1
+) else (
+  echo Log tidak ditemukan - mencoba nama antarmuka umum...
+  for %%I in (usb0 usb1 usb2 usb3 usb4 usb5 usb6 usb7 usb8 usb9 eth0 eth1 eth2 eth3 eth4 eth5 rndis0 rndis1) do (
+    %ADB% shell "su -c 'ip link set %%I down'" >nul 2>&1
+  )
 )
 
 echo [3/4] Hentikan relay Gnirehtet jika ada...
 powershell -NoProfile -Command "Get-Process -Name gnirehtet -ErrorAction SilentlyContinue | Stop-Process -Force" >nul 2>&1
 
 echo [4/4] Bersihkan script sementara di HP...
-%ADB% shell "rm -f /data/local/tmp/rndis_setup.sh /data/local/tmp/rndis_setup.log" >nul 2>&1
+%ADB% shell "su -c 'rm -f /data/local/tmp/rndis_setup.sh /data/adb/rndis_setup.sh /data/local/tmp/rndis_setup.log'" >nul 2>&1
 
 echo.
 echo Selesai. Cabut kabel atau reboot HP agar USB kembali ke mode ADB normal.

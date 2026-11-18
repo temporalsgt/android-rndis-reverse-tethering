@@ -58,19 +58,28 @@ function Get-PrivateAdapterName {
         throw "Adapter private '$Override' tidak ditemukan."
     }
 
-    # Utamakan yang Up, lalu yang paling baru dibuat (InterfaceIndex terbesar)
-    # supaya adapter stale dari sesi sebelumnya tidak terpilih.
-    $adapter = Get-NetAdapter |
+    $candidates = @(Get-NetAdapter |
         Where-Object {
             $_.InterfaceDescription -match 'RNDIS|Remote NDIS' -or
             $_.Name -match 'RNDIS'
-        } |
+        })
+    if ($candidates.Count -eq 0) { return $null }
+
+    # Prioritaskan adapter yang sudah memiliki IP ICS: ini yang paling mungkin
+    # menjadi sisi aktif, bukan adapter stale dari sesi sebelumnya.
+    $withIcsIp = @($candidates | Where-Object {
+        $ips = @(Get-NetIPAddress -InterfaceIndex $_.InterfaceIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue)
+        @($ips | Where-Object { $_.IPAddress -like '192.168.137.*' }).Count -gt 0
+    })
+    if ($withIcsIp.Count -gt 0) {
+        return @($withIcsIp | Sort-Object InterfaceIndex | Select-Object -First 1)[0].Name
+    }
+
+    # Fallback: yang Up, lalu yang paling baru dibuat (InterfaceIndex terbesar).
+    return @($candidates |
         Sort-Object -Property @{ Expression = { if ($_.Status -eq 'Up') { 0 } else { 1 } } },
                                 @{ Expression = { -$_.InterfaceIndex } } |
-        Select-Object -First 1
-    if ($adapter) { return $adapter.Name }
-
-    return $null
+        Select-Object -First 1)[0].Name
 }
 
 function Get-IcsConnection {
@@ -118,39 +127,59 @@ if ($private -and $private -eq $public) {
     exit 1
 }
 
+$netshare = $null
+$pubConn = $null
+$privConn = $null
 $lastError = $null
-for ($attempt = 1; $attempt -le 3; $attempt++) {
-    $netshare = New-Object -ComObject HNetCfg.HNetShare.1
-    $pubConn = Get-IcsConnection -Netshare $netshare -Name $public
-    $privConn = $null
-    if ($private) { $privConn = Get-IcsConnection -Netshare $netshare -Name $private }
+$message = $null
 
-    if (-not $pubConn -or ($Action -eq 'Enable' -and -not $privConn)) {
-        $lastError = "Koneksi ICS belum terdaftar (public=$public, private=$private)."
-        Start-Sleep -Seconds 2
-        continue
-    }
+try {
+    for ($attempt = 1; $attempt -le 3; $attempt++) {
+        $netshare = New-Object -ComObject HNetCfg.HNetShare.1
+        $pubConn = Get-IcsConnection -Netshare $netshare -Name $public
+        $privConn = $null
+        if ($private) { $privConn = Get-IcsConnection -Netshare $netshare -Name $private }
 
-    try {
-        if ($Action -eq 'Enable') {
-            Set-SharingState -Netshare $netshare -Connection $pubConn  -Role Public
-            Set-SharingState -Netshare $netshare -Connection $privConn -Role Private
-            Write-Output "ICS aktif: $public -> $private"
+        if (-not $pubConn -or ($Action -eq 'Enable' -and -not $privConn)) {
+            $lastError = "Koneksi ICS belum terdaftar (public=$public, private=$private)."
+            Start-Sleep -Seconds 2
+            continue
         }
-        else {
-            Set-SharingState -Netshare $netshare -Connection $pubConn -Role Off
-            if ($privConn) { Set-SharingState -Netshare $netshare -Connection $privConn -Role Off }
-            Write-Output "ICS nonaktif ($public$(if ($private) { ", $private" }))."
+
+        try {
+            if ($Action -eq 'Enable') {
+                Set-SharingState -Netshare $netshare -Connection $pubConn  -Role Public
+                Set-SharingState -Netshare $netshare -Connection $privConn -Role Private
+                $message = "ICS aktif: $public -> $private"
+            }
+            else {
+                Set-SharingState -Netshare $netshare -Connection $pubConn -Role Off
+                if ($privConn) { Set-SharingState -Netshare $netshare -Connection $privConn -Role Off }
+                $message = "ICS nonaktif ($public$(if ($private) { ", $private" }))."
+            }
+            break
         }
-        exit 0
+        catch {
+            $lastError = $_.Exception.Message
+            # State ICS kadang stale (0x80040201). Restart service lalu coba lagi.
+            Start-Sleep -Seconds 2
+            Restart-Service SharedAccess -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 3
+        }
     }
-    catch {
-        $lastError = $_.Exception.Message
-        # State ICS kadang stale (0x80040201). Restart service lalu coba lagi.
-        Start-Sleep -Seconds 2
-        Restart-Service SharedAccess -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 3
+}
+finally {
+    # Lepaskan objek COM agar tidak menumpuk di proses PowerShell yang dipanggil berulang.
+    foreach ($obj in @($privConn, $pubConn, $netshare)) {
+        if ($null -ne $obj) {
+            try { [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($obj) } catch { }
+        }
     }
+}
+
+if ($message) {
+    Write-Output $message
+    exit 0
 }
 
 Write-Error "Gagal mengubah ICS setelah 3 percobaan: $lastError"

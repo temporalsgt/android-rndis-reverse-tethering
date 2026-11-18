@@ -49,13 +49,14 @@ set ADB="%ADBBIN%" -s %SERIAL%
 echo Perangkat: %SERIAL%
 echo.
 
-rem ---- Cek koneksi & root ----
+rem ---- Cek koneksi: device / unauthorized / offline ----
 echo [0/6] Cek perangkat dan root...
 set /a WAIT=0
 :wait_device
-%ADB% devices | findstr /c:"%SERIAL%" | findstr /c:"unauthorized" >nul
-if not errorlevel 1 (
-  echo.
+set "STATE="
+for /f "skip=1 tokens=1,2" %%A in ('%ADB% devices 2^>nul') do if "%%A"=="%SERIAL%" set "STATE=%%B"
+if /i "%STATE%"=="device" goto :device_ready
+if /i "%STATE%"=="unauthorized" (
   echo [INFO] Izinkan USB debugging di layar HP ^(centang "Always allow"^), lalu tunggu...
   ping -n 3 127.0.0.1 >nul
   set /a WAIT+=1
@@ -63,6 +64,26 @@ if not errorlevel 1 (
   echo ERROR: otorisasi USB debugging tidak jadi.
   exit /b 1
 )
+if /i "%STATE%"=="offline" (
+  echo [INFO] ADB offline - mencoba start-server + reconnect...
+  "%ADBBIN%" kill-server >nul 2>&1
+  "%ADBBIN%" start-server >nul 2>&1
+  "%ADBBIN%" reconnect offline >nul 2>&1
+  ping -n 5 127.0.0.1 >nul
+  set /a WAIT+=1
+  if %WAIT% LSS 10 goto :wait_device
+  echo ERROR: ADB tetap offline setelah re-enumerasi.
+  exit /b 1
+)
+if not defined STATE (
+  ping -n 2 127.0.0.1 >nul
+  set /a WAIT+=1
+  if %WAIT% LSS 30 goto :wait_device
+)
+echo ERROR: perangkat %SERIAL% tidak dalam keadaan siap ^(status=%STATE%^).
+exit /b 1
+
+:device_ready
 %ADB% shell "su -c id" 2>nul | findstr /c:"uid=0" >nul
 if errorlevel 1 (
   echo ERROR: root ^(su^) tidak tersedia di perangkat.
@@ -73,13 +94,18 @@ echo Root: OK
 echo [1/6] Aktifkan service ICS Windows...
 powershell -NoProfile -Command "Set-Service SharedAccess -StartupType Manual; Start-Service SharedAccess" >nul 2>&1
 
-echo [2/6] Kirim setup script ke HP...
-%ADB% push "%BASE%tools\rndis_setup.sh" /data/local/tmp/rndis_setup.sh >nul
+rem ---- Taruh script di direktori root-only bila tersedia (hindari /data/local/tmp) ----
+set "REMOTE_SH=/data/local/tmp/rndis_setup.sh"
+%ADB% shell "su -c '[ -d /data/adb ] && echo yes'" 2>nul | findstr /c:"yes" >nul
+if not errorlevel 1 set "REMOTE_SH=/data/adb/rndis_setup.sh"
+
+echo [2/6] Kirim setup script ke HP (%REMOTE_SH%)...
+%ADB% push "%BASE%tools\rndis_setup.sh" "%REMOTE_SH%" >nul
 if errorlevel 1 ( echo ERROR: gagal push script. & exit /b 1 )
-%ADB% shell chmod 755 /data/local/tmp/rndis_setup.sh
+%ADB% shell "su -c 'chmod 755 %REMOTE_SH%'" >nul 2>&1
 
 echo [3/6] Jalankan setup di HP sebagai root...
-%ADB% shell "su -c 'sh /data/local/tmp/rndis_setup.sh >/dev/null 2>&1 &'"
+%ADB% shell "su -c 'sh %REMOTE_SH% >/dev/null 2>&1 &'"
 
 echo [4/6] Tunggu gadget + DHCP...
 ping -n 23 127.0.0.1 >nul
@@ -92,9 +118,17 @@ if errorlevel 1 (
 )
 
 echo [6/6] Verifikasi...
+set "IF="
+for /f "tokens=2 delims==" %%I in ('%ADB% shell "grep -m1 antarmuka= /data/local/tmp/rndis_setup.log 2^>nul"') do set "IF=%%I"
+if defined IF echo Antarmuka terdeteksi: %IF%
+
 set /a TRY=0
 :verify
-%ADB% shell "ip -o addr show" 2>nul | findstr /c:"192.168.137." >nul
+if defined IF (
+  %ADB% shell "ip -o addr show dev %IF% 2>nul" | findstr /c:"192.168.137." >nul
+) else (
+  %ADB% shell "ip -o addr show" | findstr /c:"192.168.137." >nul
+)
 if not errorlevel 1 goto :verify_ok
 set /a TRY+=1
 if %TRY% GEQ 12 (
@@ -105,7 +139,7 @@ ping -n 5 127.0.0.1 >nul
 goto :verify
 
 :verify_ok
-%ADB% shell "curl -sS -o /dev/null -w 'HTTP=%%{http_code} time=%%{time_total}s\n' --max-time 15 https://play.google.com"
+%ADB% shell "if command -v curl >/dev/null 2>&1; then curl -sS -o /dev/null -w 'HTTP=%%{http_code} time=%%{time_total}s\n' --max-time 15 https://play.google.com; elif command -v wget >/dev/null 2>&1; then wget -q -O /dev/null -S --timeout=15 https://play.google.com 2>&1 | grep -m1 HTTP; else echo NO_HTTP_CLIENT; fi"
 
 :show_log
 echo.

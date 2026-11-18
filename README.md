@@ -39,7 +39,7 @@ rndis-tethering.cmd
 Atau tentukan perangkat secara eksplisit:
 
 ```cmd
-rndis-tethering.cmd REDACTED_SERIAL
+rndis-tethering.cmd <SERIAL>
 ```
 
 Serial juga bisa diambil dari environment `ANDROID_SERIAL` atau `DEVICE_SERIAL`.
@@ -56,13 +56,16 @@ Yang dilakukan script:
 8. Aktifkan ICS dengan mencari adapter internet (default route) dan adapter RNDIS secara otomatis.
 9. Verifikasi IP, HTTP `play.google.com`, dan tampilkan log dari HP.
 
+Script sisi HP ditempatkan di `/data/adb/` bila direktori root-only itu tersedia;
+jika tidak, fallback ke `/data/local/tmp/` (keduanya dibersihkan oleh `restore-default.cmd`).
+
 ---
 
 ## Verifikasi manual
 
 ```powershell
 adb shell "ip -o addr show"
-adb shell "curl -sS -o /dev/null -w 'HTTP=%{http_code}\n' --max-time 15 https://play.google.com"
+adb shell "if command -v curl >/dev/null 2>&1; then curl -sS -o /dev/null -w 'HTTP=%{http_code}\n' --max-time 15 https://play.google.com; elif command -v wget >/dev/null 2>&1; then wget -q -O /dev/null -S --timeout=15 https://play.google.com 2>&1 | grep -m1 HTTP; else echo NO_HTTP_CLIENT; fi"
 adb shell "dumpsys connectivity | grep DnsAddresses"
 ```
 
@@ -150,6 +153,9 @@ adb shell "dumpsys connectivity | grep -i 'Transports: ETHERNET'"
   umum untuk Android dengan configfs + fungsi RNDIS.
 - Perubahan di HP bersifat **runtime** (hilang saat reboot/cabut kabel).
 - `setenforce 0` hanya dilakukan selama setup lalu dikembalikan ke nilai awal.
+  Perlu dicatat: ini **melemahkan SELinux secara global untuk sementara** (beberapa detik)
+  dan memerlukan kernel yang mengizinkan perubahan mode. Pada perangkat produksi/kerja,
+  pahami risikonya sebelum menjalankan.
 - Tidak menyentuh `/system`, `/vendor`, sepolicy, build.prop, atau modul root.
 - Gnirehtet (fallback) memakai VPN dan lebih sering bermasalah di Play Store.
 
