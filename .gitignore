@@ -1,0 +1,19 @@
+# Binary / artefact
+*.exe
+*.apk
+*.zip
+*.dll
+*.log
+
+# Toolchain & dependensi (didownload terpisah)
+tools/platform-tools/
+gnirehtet/
+
+# Screenshot & file sementaris
+*.png
+*.tmp
+SHA256SUMS.txt
+
+# OS
+Thumbs.db
+desktop.ini
