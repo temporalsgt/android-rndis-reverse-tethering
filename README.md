@@ -26,8 +26,6 @@ ping/ICMP, dan DNS berfungsi normal, serta **data seluler tidak diperlukan**.
 Binary ADB **tidak disertakan** di repo (terkena `.gitignore`). Siapkan sendiri
 atau taruh `adb.exe` di `tools/platform-tools/`.
 
-Metode fallback Gnirehtet (VPN) opsional; binary tidak ikut ter-clone.
-
 ---
 
 ## Dapatkan file repo (tanpa Git juga bisa)
@@ -239,7 +237,7 @@ adb shell cat /data/local/tmp/rndis_setup.log
 restore-default.cmd
 ```
 
-Script ini **hanya** mematikan ICS, menurunkan antarmuka RNDIS, menghentikan Gnirehtet,
+Script ini **hanya** mematikan ICS, menurunkan antarmuka RNDIS,
 dan membersihkan file sementara. Service `SharedAccess` sengaja dibiarkan dalam keadaan
 `Manual` (tidak dinonaktifkan permanen), dan **data seluler tidak diubah**.
 
@@ -264,10 +262,9 @@ Setelah itu cabut kabel atau reboot HP agar USB kembali ke mode ADB normal.
 | `tools/rndis_setup.sh` | Sisi HP: deteksi gadget/UDC/fungsi, rebind, rename, tunggu DHCP |
 | `tools/ics.ps1` | Sisi PC: aktifkan/nonaktifkan ICS dengan deteksi adapter otomatis |
 | `restore-default.cmd` | Kembalikan kondisi awal |
-| `reverse-tethering.cmd` | Fallback opsional via Gnirehtet (VPN) |
 | `docs/TECHNICAL.md` | Penjelasan mekanisme, kompatibilitas, dan batasan |
 
-### Penjelasan tiga file CMD
+### Penjelasan dua file CMD
 
 Semua file `.cmd` di root repo memiliki pola yang sama: cari `adb.exe`
 (`tools\platform-tools\` → `PATH` → lokasi umum), tentukan serial
@@ -303,10 +300,9 @@ Dijalankan setelah selesai memakai tethering. Juga mencari ADB & serial seperti 
 
 | Tahap | Apa yang dilakukan |
 |---|---|
-| `[1/4]` | Panggil `ics.ps1 -Action Disable` untuk mematikan ICS |
-| `[2/4]` | Turunkan antarmuka RNDIS di HP — nama dibaca dari `rndis_setup.log`; kalau log tidak ada, coba daftar nama umum |
-| `[3/4]` | Hentikan proses `gnirehtet` bila sedang jalan |
-| `[4/4]` | Hapus script/log sementara di HP |
+| `[1/3]` | Panggil `ics.ps1 -Action Disable` untuk mematikan ICS |
+| `[2/3]` | Turunkan antarmuka RNDIS di HP — nama dibaca dari `rndis_setup.log`; kalau log tidak ada, coba daftar nama umum |
+| `[3/3]` | Hapus script/log sementara di HP |
 
 **Sengaja tidak dilakukan:** mematikan permanen service `SharedAccess`, mengubah data
 seluler, atau memaksa mode USB. Karena itu, setelah menjalankan ini Anda tetap perlu
@@ -317,25 +313,6 @@ Contoh:
 
 ```cmd
 restore-default.cmd
-```
-
-#### 3. `reverse-tethering.cmd` — fallback opsional (Gnirehtet)
-
-Alternatif lama memakai **VPN** (`gnirehtet`), bukan RNDIS. Binary **tidak disertakan**
-di repo karena terkena `.gitignore`.
-
-- Butuh `gnirehtet.exe` di `gnirehtet\gnirehtet-rust-win64\`.
-- Kalau tidak ada, script berhenti dengan pesan error dan menyarankan pakai
-  `rndis-tethering.cmd`.
-- Berjalan **foreground/blokir**; tekan **Ctrl+C** untuk menghentikan (tidak perlu
-  `restore-default.cmd`, tapi tetap disarankan menjalankannya untuk membersihkan ICS).
-- Kurang disarankan: Play Store sering mendeteksi VPN dan ICMP/ping tidak selalu jalan.
-
-Contoh:
-
-```cmd
-reverse-tethering.cmd
-reverse-tethering.cmd ABC123XYZ789
 ```
 
 ---
@@ -407,7 +384,6 @@ adb shell "dumpsys connectivity | grep -i 'Transports: ETHERNET'"
   dan memerlukan kernel yang mengizinkan perubahan mode. Pada perangkat produksi/kerja,
   pahami risikonya sebelum menjalankan.
 - Tidak menyentuh `/system`, `/vendor`, sepolicy, build.prop, atau modul root.
-- Gnirehtet (fallback) memakai VPN dan lebih sering bermasalah di Play Store.
 
 ---
 

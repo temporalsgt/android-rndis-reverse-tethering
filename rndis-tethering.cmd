@@ -119,7 +119,7 @@ if errorlevel 1 (
 
 echo [6/6] Verifikasi...
 set "IF="
-for /f "tokens=2 delims==" %%I in ('%ADB% shell "grep -m1 antarmuka= /data/local/tmp/rndis_setup.log 2^>nul"') do set "IF=%%I"
+for /f "tokens=2 delims==" %%I in ('%ADB% shell grep -m1 antarmuka= /data/local/tmp/rndis_setup.log 2^>nul') do set "IF=%%I"
 if defined IF echo Antarmuka terdeteksi: %IF%
 
 set /a TRY=0

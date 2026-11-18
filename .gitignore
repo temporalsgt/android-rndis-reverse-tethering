@@ -7,7 +7,6 @@
 
 # Toolchain & dependensi (didownload terpisah)
 tools/platform-tools/
-gnirehtet/
 
 # Screenshot & file sementaris
 *.png

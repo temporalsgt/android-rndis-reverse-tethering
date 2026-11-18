@@ -38,14 +38,14 @@ if defined SERIAL (
   set ADB="%ADBBIN%"
 )
 
-echo [1/4] Matikan ICS Windows...
+echo [1/3] Matikan ICS Windows...
 powershell -NoProfile -ExecutionPolicy Bypass -File "%BASE%tools\ics.ps1" -Action Disable
 
 rem ---- Service SharedAccess sengaja DIBIARKAN (Manual). Jangan dimatikan permanen. ----
 
-echo [2/4] Turunkan antarmuka RNDIS di HP...
+echo [2/3] Turunkan antarmuka RNDIS di HP...
 set "IF="
-for /f "tokens=2 delims==" %%I in ('%ADB% shell "grep -m1 antarmuka= /data/local/tmp/rndis_setup.log 2^>nul"') do set "IF=%%I"
+for /f "tokens=2 delims==" %%I in ('%ADB% shell grep -m1 antarmuka= /data/local/tmp/rndis_setup.log 2^>nul') do set "IF=%%I"
 if defined IF (
   echo Menurunkan %IF% ...
   %ADB% shell "su -c 'ip link set %IF% down'" >nul 2>&1
@@ -56,10 +56,7 @@ if defined IF (
   )
 )
 
-echo [3/4] Hentikan relay Gnirehtet jika ada...
-powershell -NoProfile -Command "Get-Process -Name gnirehtet -ErrorAction SilentlyContinue | Stop-Process -Force" >nul 2>&1
-
-echo [4/4] Bersihkan script sementara di HP...
+echo [3/3] Bersihkan script sementara di HP...
 %ADB% shell "su -c 'rm -f /data/local/tmp/rndis_setup.sh /data/adb/rndis_setup.sh /data/local/tmp/rndis_setup.log'" >nul 2>&1
 
 echo.

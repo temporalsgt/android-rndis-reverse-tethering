@@ -153,7 +153,6 @@ walau server ADB di-restart (`adb kill-server && adb start-server`).
 | Service `SharedAccess` | Manual/Running | Dibiarkan (tidak di-disable) |
 | File `/data/local/tmp/rndis_setup.*` | Sementara | Dihapus `restore-default.cmd` |
 | Data seluler | Tidak disentuh | — |
-| Gnirehtet / `tun0` (opsional) | Sesuai pemakaian | Hentikan proses / uninstall app |
 
 Tidak menyentuh `/system`, `/vendor`, sepolicy, `build.prop`, atau modul root.
 
@@ -185,8 +184,6 @@ Jangan memperkenalkan kembali `Disable-PnpDevice` di sini.
   (cek `dumpsys ethernet`).
 - Beberapa gadget HAL mengulang konfigurasi saat jaringan berubah sehingga ADB
   bisa `offline`/`unauthorized` sementara — sudah di-handle dengan retry.
-- Gnirehtet (fallback) memakai `TRANSPORT_VPN`, lebih sering bermasalah di Play
-  Store dan tidak disarankan.
 
 ---
 
@@ -225,7 +222,6 @@ Nilai-nilai di atas **hanya contoh**. Script tidak menuliskan nilai apa pun di a
 
 ## Referensi
 
-- [Gnirehtet — Genymobile](https://github.com/Genymobile/gnirehtet)
 - [XDA: Has Android 14 crippled the ndc command?](https://xdaforums.com/t/has-android-14-crippled-the-ndc-command.4645821/)
 - AOSP DNS Resolver module — `source.android.com/docs/core/ota/modular-system/dns-resolver`
 - Android configfs gadget docs — `source.android.com/docs/core/connect/usb-gadget`
