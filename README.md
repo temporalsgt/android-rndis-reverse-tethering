@@ -63,29 +63,29 @@ Ekstrak, lalu letakkan `adb.exe` di `tools\platform-tools\` atau `%USERPROFILE%\
 
 ## Cara pakai (langkah demi langkah)
 
-### Persiapan sekali saja
+### Persiapan
 
-1. **Siapkan ADB.** Di PC ini sudah ada di `C:\Users\bdstd\platform-tools\adb.exe`
-   dan folder `tools\platform-tools\` sudah terhubung ke sana, jadi tidak perlu install
-   lagi. Di PC lain: download *SDK Platform Tools*, lalu letakkan `adb.exe` di
-   `tools\platform-tools\` atau tambahkan foldernya ke `PATH`.
+1. **ADB.** Download *SDK Platform Tools* dari
+   <https://developer.android.com/tools/releases/platform-tools>, ekstrak, lalu
+   letakkan `adb.exe` di `tools\platform-tools\` di dalam folder repo, atau tambahkan
+   folder hasil ekstrak ke `PATH`. Cek dengan `adb version`.
 2. **HP:** aktifkan **Developer options → USB debugging**, dan pastikan ada akses
    **root (`su`)** yang bisa dipanggil dari ADB.
-3. **Kabel:** pakai kabel USB **data** (bukan kabel charging saja), hubungkan ke PC.
+3. **Kabel:** gunakan kabel USB **data** (bukan hanya charging), hubungkan ke PC.
 4. **PC:** buka **CMD/PowerShell sebagai Administrator** (klik kanan → *Run as
    administrator*). Hak admin wajib karena script mengatur ICS Windows.
-5. **HP:** saat diminta, tekan **Allow / Izinkan** untuk USB debugging (centang
-   *Always allow from this computer* agar tidak muncul lagi).
+5. Saat HP menampilkan dialog *Allow USB debugging*, tekan **Allow / Izinkan**
+   (centang *Always allow from this computer*).
 
-### Pemakaian harian
+### Jalankan
 
-**Langkah 1 — masuk ke folder repo**
+Buka terminal **sebagai Administrator** di folder hasil ekstrak repo:
 
 ```cmd
-cd /d C:\Users\bdstd\Documents\Motorola-G45\android-rndis-reverse-tethering
+cd /d <folder hasil ekstrak>
 ```
 
-**Langkah 2 — cek dulu perangkat terdeteksi**
+**Cek perangkat terdeteksi**
 
 ```cmd
 adb devices
@@ -101,7 +101,7 @@ ABC123XYZ789    device
 Kalau statusnya `unauthorized` → tekan *Allow* di HP lalu ulangi.
 Kalau **kosong** → cabut–pasang kabel, ganti port/kabel, atau reboot HP.
 
-**Langkah 3 — jalankan tethering**
+**Jalankan tethering**
 
 ```cmd
 rndis-tethering.cmd
@@ -120,7 +120,7 @@ set ANDROID_SERIAL=ABC123XYZ789
 rndis-tethering.cmd
 ```
 
-**Langkah 4 — tunggu sampai selesai (±40–60 detik)**
+**Tunggu sampai selesai (±40–60 detik)**
 
 Output yang menandakan sukses:
 
@@ -140,13 +140,13 @@ HTTP=302 time=0.15s
 Kalau muncul `WARNING: IP ICS belum muncul`, lihat log HP yang ditampilkan di bawahnya;
 biasanya ada keterangan di baris `addr=` / `ethernet=`.
 
-**Langkah 5 — pakai internet di HP**
+**Pakai internet di HP**
 
 Buka browser atau Play Store. Coba **matikan data seluler** — internet harus tetap jalan
 karena sekarang lewat kabel (Ethernet). Jangan heran kalau MTP/PTP/MIDI tidak aktif;
 lihat catatan di bawah.
 
-**Langkah 6 — selesai, kembalikan ke awal**
+**Selesai / kembali ke awal**
 
 ```cmd
 restore-default.cmd
@@ -156,8 +156,6 @@ Lalu **cabut kabel atau reboot HP**, dan pilih *File transfer (MTP)* di notifika
 kalau mau transfer file lagi.
 
 ---
-
-### Apa yang terjadi di belakang layar
 
 ### Mendapatkan serial (biasanya tidak perlu)
 
@@ -193,20 +191,20 @@ adb shell getprop ro.serialno
 Buka **Settings → About phone → Model & hardware / Serial number**.
 
 **3. Tanpa ADB — dari Windows:**
-Device Manager → *Android Phone / ADB Interface / Motorola ADB Interface* →
+Device Manager → *Android Phone / ADB Interface* →
 tab **Details** → properti **Device instance path**. Serial adalah bagian setelah
 backslash terakhir, misalnya `USB\VID_xxxx&PID_yyyy\ABC123XYZ789`.
 
 > Contoh di atas hanya placeholder. Jangan pakai `emulator-5554` untuk perangkat fisik.
 
-Yang dilakukan script:
+### Apa yang terjadi di belakang layar
 
 1. Cari ADB (repo → `PATH` → lokasi umum) dan tentukan serial otomatis.
 2. Tunggu otorisasi USB debugging bila muncul dialog di HP.
 3. Cek root `su`, lalu aktifkan service ICS Windows.
 4. Deteksi di HP: gadget configfs, config node, fungsi RNDIS/ADB, UDC, VID/PID.
 5. Susun gadget jadi RNDIS + ADB, rebind UDC, lalu deteksi antarmuka jaringan.
-6. Jika belum dikenal sebagai Ethernet, rename ke `usbN`/`ethN` (filter EthernetTracker umum).
+6. Rename antarmuka ke `usbN`/`ethN` agar dikenal sebagai Ethernet (filter EthernetTracker umum).
 7. Tunggu DHCP dari ICS (bukan sleep tetap).
 8. Aktifkan ICS dengan mencari adapter internet (default route) dan adapter RNDIS secara otomatis.
 9. Verifikasi IP, HTTP `play.google.com`, dan tampilkan log dari HP.
