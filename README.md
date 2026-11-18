@@ -20,12 +20,13 @@ ping/ICMP, dan DNS berfungsi normal, serta **data seluler tidak diperlukan**.
 | HP/Android | Root dengan `su` yang bisa dieksekusi lewat ADB, USB debugging aktif, kabel USB data |
 | Sistem Android | Mendukung **USB gadget configfs** (`/config/usb_gadget/<n>/`) dan memiliki fungsi **RNDIS** (mis. `gsi.rndis`, `rndis`, `rndis.rndis`) serta ADB (`ffs.adb`) |
 | PC | Windows dengan hak **Administrator** dan koneksi internet aktif |
-| ADB | **Sudah disertakan** di `tools/platform-tools/adb.exe` (beserta DLL-nya). Tidak perlu install terpisah |
+| ADB | **Platform-tools lengkap sudah disertakan** di `tools/platform-tools/`. Tidak perlu install terpisah |
 | Windows | Service `SharedAccess` (ICS) — script akan mengaturnya ke `Manual` + `Running` |
 
-Binary ADB sudah ikut di repo di folder `tools\platform-tools\`. Script akan
-memakainya lebih dulu; tidak perlu download atau menambahkan ke `PATH`.
-Lisensi dan atribusi ada di `tools\platform-tools\NOTICE.txt`.
+Seluruh isi *SDK Platform Tools* untuk Windows sudah ikut di repo di folder
+`tools\platform-tools\` — bukan hanya `adb.exe`, tapi juga `fastboot.exe`,
+`sqlite3.exe`, DLL pendukung, `NOTICE.txt`, dan utilitas lainnya. Script akan
+memakai ADB dari folder ini lebih dulu; tidak perlu download atau menambahkan ke `PATH`.
 
 ---
 
@@ -45,9 +46,10 @@ git clone https://github.com/temporalsgt/android-rndis-reverse-tethering.git
 
 Itu saja — **tidak perlu** `gh auth login` atau `git pull` untuk memakai repo ini.
 
-### ADB (sudah disertakan)
+### ADB (platform-tools sudah disertakan lengkap)
 
-Tidak perlu install atau download apa pun. Binary ada di `tools\platform-tools\adb.exe`.
+Tidak perlu install atau download apa pun. Seluruh isi platform-tools ada di
+`tools\platform-tools\` (`adb.exe`, `fastboot.exe`, DLL, utilitas, `NOTICE.txt`).
 Cek opsional:
 
 ```cmd
