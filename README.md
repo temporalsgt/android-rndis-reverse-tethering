@@ -92,6 +92,15 @@ dan membersihkan file sementara. Service `SharedAccess` sengaja dibiarkan dalam 
 
 Setelah itu cabut kabel atau reboot HP agar USB kembali ke mode ADB normal.
 
+> **Penting — fungsi USB lain:** saat RNDIS aktif, gadget USB dipakai penuh untuk
+> **RNDIS + ADB**. Karena itu **MTP (transfer file), PTP, MIDI, dan USB tethering bawaan
+> Android tidak tersedia** selama sesi. Ini disengaja oleh metode ini, bukan kerusakan.
+> Setelah `restore-default.cmd`, **cabut kabel atau reboot HP** agar komposisi gadget
+> kembali ke `adb` dan Anda bisa memilih MTP/PTP/MIDI lagi dari notifikasi USB HP.
+>
+> `restore-default.cmd` saat ini **belum** melakukan reset gadget secara aktif; reboot
+> masih merupakan cara paling aman untuk memulihkan seluruh fungsi USB.
+
 ---
 
 ## Struktur
@@ -112,6 +121,23 @@ Setelah itu cabut kabel atau reboot HP agar USB kembali ke mode ADB normal.
 **ADB `unauthorized` setelah gadget di-rebind**
 Wajar — tekan *Allow* di layar HP (centang *Always allow from this computer*).
 Script sudah menunggu dan retry otomatis.
+
+**HP tidak muncul / `USB Device Descriptor Request Failed` setelah sesi RNDIS**
+Gadget bisa saja masih stuck dalam komposisi RNDIS. Lakukan: cabut–pasang kabel,
+coba port/kabel lain, atau **force reboot HP** (Power + Volume Up ~10–15 detik).
+Setelah boot, buka notifikasi USB dan pilih *File transfer (MTP)*.
+**Jangan menonaktifkan interface ADB lewat Device Manager / PnP** — itu bisa membuat
+HP tidak ter-enumerasi sama sekali hingga reboot. Script versi terbaru sudah tidak
+lagi melakukan itu.
+
+Cek nilai USB persisten dengan:
+
+```powershell
+adb shell getprop persist.sys.usb.config
+```
+
+Nilai bawaan adalah `adb`. Bila pernah diubah manual menjadi `mtp,adb` dan ingin
+kembali persis seperti semula, set kembali ke `adb` lalu reboot HP.
 
 **"fungsi RNDIS/ADB tidak ditemukan"**
 Lihat daftar fungsi di log. ROM harus punya fungsi bertema `rndis`. Beberapa ROM

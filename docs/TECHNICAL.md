@@ -157,6 +157,23 @@ walau server ADB di-restart (`adb kill-server && adb start-server`).
 
 Tidak menyentuh `/system`, `/vendor`, sepolicy, `build.prop`, atau modul root.
 
+### 7.1 Fungsi USB lain dan pemulihannya
+
+Karena configfs disusun ulang menjadi RNDIS + ADB, **MTP/PTP/MIDI dan USB tethering
+bawaan Android tidak aktif** selama sesi. Ini konsekuensi metode, bukan bug.
+
+`restore-default.cmd` mematikan ICS dan menurunkan antarmuka, tetapi **tidak** mengubah
+kembali komposisi gadget secara aktif. Cara paling aman untuk memulihkan semua fungsi USB
+adalah **cabut kabel atau reboot HP**. Setelah itu `persist.sys.usb.config=adb`
+(mode bawaan) dipakai lagi dan MTP/PTP/MIDI bisa dipilih dari notifikasi USB.
+
+**Catatan insiden audit.** Saat pengujian pernah ditambahkan handler ADB `offline`
+yang memanggil `Disable-PnpDevice` pada *ADB Interface* Windows. Ini membuat perangkat
+berhenti ter-enumerasi (`USB\VID_0000&PID_0002`, *Device Descriptor Request Failed*)
+dan harus dipulihkan dengan reboot HP. Kode tersebut **sudah dihapus** sebelum commit;
+handler `offline` sekarang hanya melakukan `adb kill-server`/`start-server`/`reconnect`.
+Jangan memperkenalkan kembali `Disable-PnpDevice` di sini.
+
 ---
 
 ## 7. Batasan kompatibilitas
