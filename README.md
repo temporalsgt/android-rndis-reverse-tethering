@@ -30,19 +30,103 @@ Metode fallback Gnirehtet (VPN) opsional; binary tidak ikut ter-clone.
 
 ---
 
-## Cara pakai
+## Cara pakai (langkah demi langkah)
+
+### Persiapan sekali saja
+
+1. **Siapkan ADB.** Di PC ini sudah ada di `C:\Users\bdstd\platform-tools\adb.exe`
+   dan folder `tools\platform-tools\` sudah terhubung ke sana, jadi tidak perlu install
+   lagi. Di PC lain: download *SDK Platform Tools*, lalu letakkan `adb.exe` di
+   `tools\platform-tools\` atau tambahkan foldernya ke `PATH`.
+2. **HP:** aktifkan **Developer options → USB debugging**, dan pastikan ada akses
+   **root (`su`)** yang bisa dipanggil dari ADB.
+3. **Kabel:** pakai kabel USB **data** (bukan kabel charging saja), hubungkan ke PC.
+4. **PC:** buka **CMD/PowerShell sebagai Administrator** (klik kanan → *Run as
+   administrator*). Hak admin wajib karena script mengatur ICS Windows.
+5. **HP:** saat diminta, tekan **Allow / Izinkan** untuk USB debugging (centang
+   *Always allow from this computer* agar tidak muncul lagi).
+
+### Pemakaian harian
+
+**Langkah 1 — masuk ke folder repo**
+
+```cmd
+cd /d C:\Users\bdstd\Documents\Motorola-G45\android-rndis-reverse-tethering
+```
+
+**Langkah 2 — cek dulu perangkat terdeteksi**
+
+```cmd
+adb devices
+```
+
+Harus muncul seperti:
+
+```text
+List of devices attached
+ABC123XYZ789    device
+```
+
+Kalau statusnya `unauthorized` → tekan *Allow* di HP lalu ulangi.
+Kalau **kosong** → cabut–pasang kabel, ganti port/kabel, atau reboot HP.
+
+**Langkah 3 — jalankan tethering**
 
 ```cmd
 rndis-tethering.cmd
 ```
 
-Atau tentukan perangkat secara eksplisit:
+Kalau ada beberapa HP terhubung, tentukan serialnya:
 
 ```cmd
-rndis-tethering.cmd <SERIAL>
+rndis-tethering.cmd ABC123XYZ789
 ```
 
-Serial juga bisa diambil dari environment `ANDROID_SERIAL` atau `DEVICE_SERIAL`.
+Atau lewat environment variable:
+
+```cmd
+set ANDROID_SERIAL=ABC123XYZ789
+rndis-tethering.cmd
+```
+
+**Langkah 4 — tunggu sampai selesai (±40–60 detik)**
+
+Output yang menandakan sukses:
+
+```text
+[0/6] Cek perangkat dan root...
+Root: OK
+[1/6] Aktifkan service ICS Windows...
+[2/6] Kirim setup script ke HP (/data/adb/rndis_setup.sh)...
+[3/6] Jalankan setup di HP sebagai root...
+[4/6] Tunggu gadget + DHCP...
+[5/6] Aktifkan ICS (deteksi adapter otomatis)...
+ICS aktif: Ethernet -> Ethernet 2
+[6/6] Verifikasi...
+HTTP=302 time=0.15s
+```
+
+Kalau muncul `WARNING: IP ICS belum muncul`, lihat log HP yang ditampilkan di bawahnya;
+biasanya ada keterangan di baris `addr=` / `ethernet=`.
+
+**Langkah 5 — pakai internet di HP**
+
+Buka browser atau Play Store. Coba **matikan data seluler** — internet harus tetap jalan
+karena sekarang lewat kabel (Ethernet). Jangan heran kalau MTP/PTP/MIDI tidak aktif;
+lihat catatan di bawah.
+
+**Langkah 6 — selesai, kembalikan ke awal**
+
+```cmd
+restore-default.cmd
+```
+
+Lalu **cabut kabel atau reboot HP**, dan pilih *File transfer (MTP)* di notifikasi USB
+kalau mau transfer file lagi.
+
+---
+
+### Apa yang terjadi di belakang layar
 
 ### Mendapatkan serial (biasanya tidak perlu)
 
