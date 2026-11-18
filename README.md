@@ -261,6 +261,7 @@ Setelah itu cabut kabel atau reboot HP agar USB kembali ke mode ADB normal.
 | `tools/rndis_setup.sh` | Sisi HP: deteksi gadget/UDC/fungsi, rebind, rename, tunggu DHCP |
 | `tools/ics.ps1` | Sisi PC: aktifkan/nonaktifkan ICS dengan deteksi adapter otomatis |
 | `tools/usb_status.ps1` | Mesin pemeriksa status USB yang dipanggil `check-usb.cmd` |
+| `tools/usb_status_termux.sh` | Versi bash dijalankan **di HP lewat Termux** |
 | `docs/TECHNICAL.md` | Penjelasan mekanisme, kompatibilitas, dan batasan |
 
 ### Penjelasan tiga file CMD
@@ -349,6 +350,39 @@ Contoh potongan hasil:
 MODE NORMAL (ADB/MTP) - belum masuk RNDIS.
 Catatan: persist.sys.usb.config = 'mtp,adb' (bawaan: 'adb').
 ```
+
+### Cek dari HP (Termux)
+
+Kalau ingin memeriksa langsung dari perangkat, pakai `tools/usb_status_termux.sh`.
+Skrip ini **read-only** dan bisa jalan dengan `sh` maupun `bash`.
+
+Salin ke HP lewat ADB:
+
+```cmd
+adb push tools\usb_status_termux.sh /sdcard/Download/usb-status.sh
+```
+
+Lalu di Termux:
+
+```sh
+bash /sdcard/Download/usb-status.sh
+```
+
+Atau download langsung di Termux (butuh `curl`/`wget`):
+
+```sh
+curl -L -o usb-status.sh \
+  https://raw.githubusercontent.com/temporalsgt/android-rndis-reverse-tethering/master/tools/usb_status_termux.sh
+bash usb-status.sh
+```
+
+Yang ditampilkan: serial/model/Android, konfigurasi USB, isi configfs (UDC,
+nama konfigurasi, VID/PID), antarmuka `usbN` + IP, `EthernetTracker`, DNS, log
+sesi terakhir, dan kesimpulan **MODE NORMAL / TRANSISI / MODE RNDIS** yang sama
+dengan versi Windows.
+
+> Membaca configfs dan `/data/local/tmp/rndis_setup.log` memerlukan akses root.
+> Tanpa `su`, bagian itu ditandai tidak terbaca; sisanya tetap tampil.
 
 ---
 
