@@ -44,6 +44,46 @@ rndis-tethering.cmd <SERIAL>
 
 Serial juga bisa diambil dari environment `ANDROID_SERIAL` atau `DEVICE_SERIAL`.
 
+### Mendapatkan serial (biasanya tidak perlu)
+
+Kalau hanya satu HP terhubung, script otomatis memakai serial itu — Anda **tidak perlu**
+mencarinya. Serial diperlukan hanya kalau ada beberapa perangkat terhubung atau ingin
+menentukan perangkat secara eksplisit.
+
+Cara mendapatkannya:
+
+**1. Lewat ADB (paling cepat, saat HP sudah terhubung & diizinkan):**
+
+```cmd
+adb devices
+```
+
+Output:
+
+```text
+List of devices attached
+ABC123XYZ789    device
+```
+
+Kolom pertama (`ABC123XYZ789`) itu serialnya. Kalau statusnya `unauthorized`, serialnya
+tetap terlihat — cukup tekan *Allow* di layar HP.
+
+Bisa juga dari dalam perangkat:
+
+```cmd
+adb shell getprop ro.serialno
+```
+
+**2. Tanpa ADB — dari HP:**
+Buka **Settings → About phone → Model & hardware / Serial number**.
+
+**3. Tanpa ADB — dari Windows:**
+Device Manager → *Android Phone / ADB Interface / Motorola ADB Interface* →
+tab **Details** → properti **Device instance path**. Serial adalah bagian setelah
+backslash terakhir, misalnya `USB\VID_xxxx&PID_yyyy\ABC123XYZ789`.
+
+> Contoh di atas hanya placeholder. Jangan pakai `emulator-5554` untuk perangkat fisik.
+
 Yang dilakukan script:
 
 1. Cari ADB (repo → `PATH` → lokasi umum) dan tentukan serial otomatis.
