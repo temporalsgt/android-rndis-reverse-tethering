@@ -325,6 +325,10 @@ check-usb.cmd
 check-usb.cmd <SERIAL>
 ```
 
+Kalau dijalankan dengan **double-click** dari File Explorer, jendela akan tetap terbuka
+dan meminta menekan sembarang tombol di akhir — ini supaya hasilnya sempat dibaca.
+Kalau dijalankan dari terminal yang sudah terbuka, cukup tekan Enter saat diminta.
+
 Yang ditampilkan:
 
 - **ADB**: binary yang dipakai, serial dan status (`device` / `unauthorized` / `offline`).
