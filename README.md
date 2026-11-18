@@ -256,17 +256,20 @@ Setelah itu cabut kabel atau reboot HP agar USB kembali ke mode ADB normal.
 | File | Fungsi |
 |---|---|
 | `rndis-tethering.cmd` | Entrypoint utama — deteksi otomatis + aktifkan RNDIS & ICS |
+| `restore-default.cmd` | Kembalikan kondisi awal |
+| `check-usb.cmd` | Cek kondisi USB (Windows + HP) + kesimpulan mode |
 | `tools/rndis_setup.sh` | Sisi HP: deteksi gadget/UDC/fungsi, rebind, rename, tunggu DHCP |
 | `tools/ics.ps1` | Sisi PC: aktifkan/nonaktifkan ICS dengan deteksi adapter otomatis |
-| `restore-default.cmd` | Kembalikan kondisi awal |
+| `tools/usb_status.ps1` | Mesin pemeriksa status USB yang dipanggil `check-usb.cmd` |
 | `docs/TECHNICAL.md` | Penjelasan mekanisme, kompatibilitas, dan batasan |
 
-### Penjelasan dua file CMD
+### Penjelasan tiga file CMD
 
-Semua file `.cmd` di root repo memiliki pola yang sama: cari `adb.exe`
+`rndis-tethering.cmd` dan `restore-default.cmd` memiliki pola yang sama: cari `adb.exe`
 (`tools\platform-tools\` → `PATH` → lokasi umum), tentukan serial
 (argumen → `ANDROID_SERIAL`/`DEVICE_SERIAL` → perangkat pertama yang `device`),
-lalu menjalankan tugasnya.
+lalu menjalankan tugasnya. `check-usb.cmd` hanya wrapper tipis untuk
+`tools\usb_status.ps1` yang melakukan pemeriksaan read-only.
 
 #### 1. `rndis-tethering.cmd` — file utama
 
@@ -310,6 +313,37 @@ Contoh:
 
 ```cmd
 restore-default.cmd
+```
+
+#### 3. `check-usb.cmd` — cek kondisi USB
+
+Menampilkan informasi dari **Windows dan HP sekaligus**, lalu memberi kesimpulan.
+Tidak mengubah apa pun (read-only), jadi aman dipakai kapan saja.
+
+```cmd
+check-usb.cmd
+check-usb.cmd <SERIAL>
+```
+
+Yang ditampilkan:
+
+- **ADB**: binary yang dipakai, serial dan status (`device` / `unauthorized` / `offline`).
+- **Android**: `persist.sys.usb.config`, `sys.usb.config`, fungsi USB, antarmuka
+  `usbN`/`ethN`, IP `192.168.137.x`, `EthernetTracker`, isi configfs (UDC/config/VID/PID),
+  dan baris penting dari log sesi terakhir.
+- **Windows**: device USB yang ter-enumerasi + VID/PID, adapter Remote NDIS beserta IP,
+  status service `SharedAccess`, dan koneksi ICS yang aktif.
+- **Kesimpulan**, salah satu dari:
+  - `MODE RNDIS / reverse tethering SEDANG AKTIF`
+  - `KONDISI TRANSISI: ada jejak RNDIS tapi belum aktif penuh`
+  - `MODE NORMAL (ADB/MTP) - belum masuk RNDIS`
+
+Contoh potongan hasil:
+
+```text
+=== KESIMPULAN ===
+MODE NORMAL (ADB/MTP) - belum masuk RNDIS.
+Catatan: persist.sys.usb.config = 'mtp,adb' (bawaan: 'adb').
 ```
 
 ---
