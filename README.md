@@ -267,6 +267,77 @@ Setelah itu cabut kabel atau reboot HP agar USB kembali ke mode ADB normal.
 | `reverse-tethering.cmd` | Fallback opsional via Gnirehtet (VPN) |
 | `docs/TECHNICAL.md` | Penjelasan mekanisme, kompatibilitas, dan batasan |
 
+### Penjelasan tiga file CMD
+
+Semua file `.cmd` di root repo memiliki pola yang sama: cari `adb.exe`
+(`tools\platform-tools\` → `PATH` → lokasi umum), tentukan serial
+(argumen → `ANDROID_SERIAL`/`DEVICE_SERIAL` → perangkat pertama yang `device`),
+lalu menjalankan tugasnya.
+
+#### 1. `rndis-tethering.cmd` — file utama
+
+Yang paling sering dipakai. Wajib dijalankan sebagai **Administrator**.
+
+| Tahap | Apa yang dilakukan |
+|---|---|
+| Cek awal | Cek hak admin, cari ADB, tentukan serial, tunggu status `device` (retry `unauthorized` / `offline`), cek root `su` |
+| `[1/6]` | Nyalakan service Windows `SharedAccess` (ICS), di-set `Manual` |
+| `[2/6]` | Push `tools\rndis_setup.sh` ke HP — ke `/data/adb/` bila ada, else `/data/local/tmp/` — lalu `chmod 755` |
+| `[3/6]` | Jalankan script itu di HP sebagai root, di **background** (karena ADB putus saat USB di-rebind) |
+| `[4/6]` | Tunggu gadget USB + DHCP diberikan Windows |
+| `[5/6]` | Panggil `tools\ics.ps1 -Action Enable` (adapter internet & RNDIS dideteksi otomatis) |
+| `[6/6]` | Verifikasi: baca antarmuka dari log HP, cek IP `192.168.137.x` (retry), cek HTTP via `curl`/`wget`, tampilkan log HP |
+
+Contoh pemakaian:
+
+```cmd
+rndis-tethering.cmd
+rndis-tethering.cmd ABC123XYZ789
+```
+
+Exit code `0` = selesai (cek baris `HTTP=`), `1` = gagal pada tahap awal/ICS.
+
+#### 2. `restore-default.cmd` — pemulih
+
+Dijalankan setelah selesai memakai tethering. Juga mencari ADB & serial seperti di atas.
+
+| Tahap | Apa yang dilakukan |
+|---|---|
+| `[1/4]` | Panggil `ics.ps1 -Action Disable` untuk mematikan ICS |
+| `[2/4]` | Turunkan antarmuka RNDIS di HP — nama dibaca dari `rndis_setup.log`; kalau log tidak ada, coba daftar nama umum |
+| `[3/4]` | Hentikan proses `gnirehtet` bila sedang jalan |
+| `[4/4]` | Hapus script/log sementara di HP |
+
+**Sengaja tidak dilakukan:** mematikan permanen service `SharedAccess`, mengubah data
+seluler, atau memaksa mode USB. Karena itu, setelah menjalankan ini Anda tetap perlu
+**cabut kabel atau reboot HP** supaya komposisi gadget kembali ke `adb` dan MTP/PTP/MIDI
+bisa dipakai lagi.
+
+Contoh:
+
+```cmd
+restore-default.cmd
+```
+
+#### 3. `reverse-tethering.cmd` — fallback opsional (Gnirehtet)
+
+Alternatif lama memakai **VPN** (`gnirehtet`), bukan RNDIS. Binary **tidak disertakan**
+di repo karena terkena `.gitignore`.
+
+- Butuh `gnirehtet.exe` di `gnirehtet\gnirehtet-rust-win64\`.
+- Kalau tidak ada, script berhenti dengan pesan error dan menyarankan pakai
+  `rndis-tethering.cmd`.
+- Berjalan **foreground/blokir**; tekan **Ctrl+C** untuk menghentikan (tidak perlu
+  `restore-default.cmd`, tapi tetap disarankan menjalankannya untuk membersihkan ICS).
+- Kurang disarankan: Play Store sering mendeteksi VPN dan ICMP/ping tidak selalu jalan.
+
+Contoh:
+
+```cmd
+reverse-tethering.cmd
+reverse-tethering.cmd ABC123XYZ789
+```
+
 ---
 
 ## Troubleshooting
