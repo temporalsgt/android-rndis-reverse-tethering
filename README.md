@@ -30,6 +30,78 @@ Metode fallback Gnirehtet (VPN) opsional; binary tidak ikut ter-clone.
 
 ---
 
+## Mulai dari nol (belum punya repo)
+
+Bagian ini untuk PC yang **belum** punya folder repo ini sama sekali.
+
+### 1. Cek / pasang Git dan GitHub CLI
+
+```cmd
+git --version
+gh --version
+```
+
+Kalau belum ada, pasang lewat winget:
+
+```cmd
+winget install --id Git.Git -e
+winget install --id GitHub.cli -e
+```
+
+Tutup dan buka lagi terminal setelah instalasi agar `PATH` terisi.
+
+### 2. Login GitHub
+
+```cmd
+gh auth login
+```
+
+Pilih: **GitHub.com → HTTPS → Login with a web browser**. Akan muncul kode sekali pakai;
+buka `https://github.com/login/device`, masukkan kode, lalu tekan *Authorize*.
+Cek hasilnya:
+
+```cmd
+gh auth status
+```
+
+Harus muncul `✓ Logged in to github.com account <username>`.
+
+### 3. Clone repo
+
+```cmd
+cd /d C:\Users\<Anda>\Documents\<folder kerja>
+git clone https://github.com/temporalsgt/android-rndis-reverse-tethering.git
+cd android-rndis-reverse-tethering
+```
+
+Kalau folder sudah ada dari sesi sebelumnya, jangan clone ulang — cukup:
+
+```cmd
+cd /d <path>\android-rndis-reverse-tethering
+git pull
+```
+
+### 4. Siapkan ADB (binary tidak ikut ter-clone)
+
+Download *SDK Platform Tools*:
+<https://developer.android.com/tools/releases/platform-tools>
+
+Ekstrak, lalu taruh `adb.exe` di salah satu lokasi:
+
+- `tools\platform-tools\adb.exe` di dalam repo, **atau**
+- `%USERPROFILE%\platform-tools\adb.exe`, **atau**
+- tambahkan folder platform-tools ke `PATH`.
+
+Cek:
+
+```cmd
+adb version
+```
+
+### 5. Lanjut ke bagian "Cara pakai" di bawah.
+
+---
+
 ## Cara pakai (langkah demi langkah)
 
 ### Persiapan sekali saja
