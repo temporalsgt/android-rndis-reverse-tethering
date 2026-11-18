@@ -129,8 +129,9 @@ periksa VID/PID/function gadget di log HP dan driver Windows.
 
 ## 5. ADB & otorisasi
 
-- ADB dicari berurutan: `tools/platform-tools/`, `PATH`, `%USERPROFILE%\platform-tools`,
-  `C:\platform-tools`, `%ProgramFiles%\platform-tools`.
+- ADB yang dibundling ada di `tools/platform-tools/` dan dicari lebih dulu; fallback:
+  `PATH`, `%USERPROFILE%\platform-tools`, `C:\platform-tools`,
+  `%ProgramFiles%\platform-tools`.
 - Serial: argumen CLI → `ANDROID_SERIAL` → `DEVICE_SERIAL` → perangkat pertama
   dengan status `device`.
 - Setelah UDC di-rebind, Android bisa menganggap koneksi sebagai host baru dan

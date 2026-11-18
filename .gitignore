@@ -1,14 +1,16 @@
-# Binary / artefact
+# Binary / artefact (kecuali ADB yang sengaja dibundling)
 *.exe
 *.apk
 *.zip
 *.dll
 *.log
+!tools/platform-tools/*.exe
+!tools/platform-tools/*.dll
 
-# Toolchain & dependensi (didownload terpisah)
-tools/platform-tools/
+# Toolchain & dependensi
+# tools/platform-tools/ TIDAK di-ignore: adb.exe + DLL disertakan di repo.
 
-# Screenshot & file sementaris
+# Screenshot & file sementara
 *.png
 *.tmp
 SHA256SUMS.txt

@@ -20,11 +20,12 @@ ping/ICMP, dan DNS berfungsi normal, serta **data seluler tidak diperlukan**.
 | HP/Android | Root dengan `su` yang bisa dieksekusi lewat ADB, USB debugging aktif, kabel USB data |
 | Sistem Android | Mendukung **USB gadget configfs** (`/config/usb_gadget/<n>/`) dan memiliki fungsi **RNDIS** (mis. `gsi.rndis`, `rndis`, `rndis.rndis`) serta ADB (`ffs.adb`) |
 | PC | Windows dengan hak **Administrator** dan koneksi internet aktif |
-| ADB | Tersedia di salah satu: `tools/platform-tools/`, `PATH`, `%USERPROFILE%\platform-tools\`, `C:\platform-tools\`, atau `%ProgramFiles%\platform-tools\` |
+| ADB | **Sudah disertakan** di `tools/platform-tools/adb.exe` (beserta DLL-nya). Tidak perlu install terpisah |
 | Windows | Service `SharedAccess` (ICS) — script akan mengaturnya ke `Manual` + `Running` |
 
-Binary ADB **tidak disertakan** di repo (terkena `.gitignore`). Siapkan sendiri
-atau taruh `adb.exe` di `tools/platform-tools/`.
+Binary ADB sudah ikut di repo di folder `tools\platform-tools\`. Script akan
+memakainya lebih dulu; tidak perlu download atau menambahkan ke `PATH`.
+Lisensi dan atribusi ada di `tools\platform-tools\NOTICE.txt`.
 
 ---
 
@@ -44,18 +45,14 @@ git clone https://github.com/temporalsgt/android-rndis-reverse-tethering.git
 
 Itu saja — **tidak perlu** `gh auth login` atau `git pull` untuk memakai repo ini.
 
-### ADB
+### ADB (sudah disertakan)
 
-Binary ADB tidak ikut di ZIP. Cek dulu:
+Tidak perlu install atau download apa pun. Binary ada di `tools\platform-tools\adb.exe`.
+Cek opsional:
 
 ```cmd
-adb version
+tools\platform-tools\adb.exe version
 ```
-
-Kalau belum ada, download *SDK Platform Tools*:
-<https://developer.android.com/tools/releases/platform-tools>
-
-Ekstrak, lalu letakkan `adb.exe` di `tools\platform-tools\` atau `%USERPROFILE%\platform-tools\`.
 
 ---
 
@@ -63,10 +60,8 @@ Ekstrak, lalu letakkan `adb.exe` di `tools\platform-tools\` atau `%USERPROFILE%\
 
 ### Persiapan
 
-1. **ADB.** Download *SDK Platform Tools* dari
-   <https://developer.android.com/tools/releases/platform-tools>, ekstrak, lalu
-   letakkan `adb.exe` di `tools\platform-tools\` di dalam folder repo, atau tambahkan
-   folder hasil ekstrak ke `PATH`. Cek dengan `adb version`.
+1. **ADB.** Sudah disertakan di `tools\platform-tools\` — tidak perlu install.
+   Cek opsional: `tools\platform-tools\adb.exe version`.
 2. **HP:** aktifkan **Developer options → USB debugging**, dan pastikan ada akses
    **root (`su`)** yang bisa dipanggil dari ADB.
 3. **Kabel:** gunakan kabel USB **data** (bukan hanya charging), hubungkan ke PC.
@@ -197,7 +192,7 @@ backslash terakhir, misalnya `USB\VID_xxxx&PID_yyyy\ABC123XYZ789`.
 
 ### Apa yang terjadi di belakang layar
 
-1. Cari ADB (repo → `PATH` → lokasi umum) dan tentukan serial otomatis.
+1. Pakai ADB dari `tools\platform-tools\` (fallback: `PATH` → lokasi umum) dan tentukan serial otomatis.
 2. Tunggu otorisasi USB debugging bila muncul dialog di HP.
 3. Cek root `su`, lalu aktifkan service ICS Windows.
 4. Deteksi di HP: gadget configfs, config node, fungsi RNDIS/ADB, UDC, VID/PID.
