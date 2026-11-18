@@ -102,6 +102,11 @@ Kalau **kosong** → cabut–pasang kabel, ganti port/kabel, atau reboot HP.
 rndis-tethering.cmd
 ```
 
+> Kalau dijalankan dengan **double-click**, klik kanan dulu file-nya dan pilih
+> **Run as administrator** — kalau tidak, script akan berhenti di pengecekan hak admin.
+> Jendela akan tetap terbuka dan meminta menekan sembarang tombol di akhir, supaya
+> pesan error sempat dibaca.
+
 Kalau ada beberapa HP terhubung, tentukan serialnya:
 
 ```cmd

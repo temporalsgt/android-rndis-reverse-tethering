@@ -12,6 +12,8 @@ rem ---- Pastikan Administrator ----
 net session >nul 2>&1
 if errorlevel 1 (
   echo ERROR: jalankan sebagai Administrator.
+  echo Klik kanan file ini -^> Run as administrator.
+  pause >nul
   exit /b 1
 )
 
@@ -27,7 +29,8 @@ if not defined ADBBIN (
   )
 )
 if not defined ADBBIN (
-  echo ERROR: adb tidak ditemukan. Install platform-tools atau taruh di tools\platform-tools\.
+  echo ERROR: adb tidak ditemukan. Pastikan tools\platform-tools\adb.exe ada.
+  pause >nul
   exit /b 1
 )
 echo ADB: %ADBBIN%
@@ -43,6 +46,8 @@ if not defined SERIAL (
 )
 if not defined SERIAL (
   echo ERROR: tidak ada perangkat Android terhubung. Hubungkan kabel USB dan aktifkan USB debugging.
+  echo Jalankan check-usb.cmd untuk melihat kondisi perangkat.
+  pause >nul
   exit /b 1
 )
 set ADB="%ADBBIN%" -s %SERIAL%
@@ -87,6 +92,7 @@ exit /b 1
 %ADB% shell "su -c id" 2>nul | findstr /c:"uid=0" >nul
 if errorlevel 1 (
   echo ERROR: root ^(su^) tidak tersedia di perangkat.
+  pause >nul
   exit /b 1
 )
 echo Root: OK
@@ -114,6 +120,7 @@ echo [5/6] Aktifkan ICS (deteksi adapter otomatis)...
 powershell -NoProfile -ExecutionPolicy Bypass -File "%BASE%tools\ics.ps1" -Action Enable
 if errorlevel 1 (
   echo ERROR: gagal mengaktifkan ICS. Cek adapter RNDIS / jalankan sebagai Administrator.
+  pause >nul
   exit /b 1
 )
 
@@ -147,4 +154,7 @@ echo === Log dari HP ===
 %ADB% shell cat /data/local/tmp/rndis_setup.log
 echo.
 echo Selesai. Untuk kembali ke kondisi awal: jalankan restore-default.cmd
+echo.
+echo Tekan sembarang tombol untuk menutup...
+pause >nul
 exit /b 0
