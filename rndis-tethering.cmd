@@ -100,14 +100,24 @@ echo Root: OK
 echo [1/6] Aktifkan service ICS Windows...
 powershell -NoProfile -Command "Set-Service SharedAccess -StartupType Manual; Start-Service SharedAccess" >nul 2>&1
 
-rem ---- Taruh script di direktori root-only bila tersedia (hindari /data/local/tmp) ----
-set "REMOTE_SH=/data/local/tmp/rndis_setup.sh"
+rem ---- Kirim ke /data/local/tmp dulu (adb push jalan sbg shell, bukan root) ----
+set "REMOTE_TMP=/data/local/tmp/rndis_setup.sh"
+set "REMOTE_SH=%REMOTE_TMP%"
 %ADB% shell "su -c '[ -d /data/adb ] && echo yes'" 2>nul | findstr /c:"yes" >nul
 if not errorlevel 1 set "REMOTE_SH=/data/adb/rndis_setup.sh"
 
-echo [2/6] Kirim setup script ke HP (%REMOTE_SH%)...
-%ADB% push "%BASE%tools\rndis_setup.sh" "%REMOTE_SH%" >nul
-if errorlevel 1 ( echo ERROR: gagal push script. & exit /b 1 )
+echo [2/6] Kirim setup script ke HP (%REMOTE_TMP%)...
+%ADB% push "%BASE%tools\rndis_setup.sh" "%REMOTE_TMP%" >nul
+if errorlevel 1 (
+  echo ERROR: gagal push script.
+  pause >nul
+  exit /b 1
+)
+
+rem ---- Pindahkan ke direktori root-only bila tersedia ----
+if not "%REMOTE_SH%"=="%REMOTE_TMP%" (
+  %ADB% shell "su -c 'cp %REMOTE_TMP% %REMOTE_SH%; chmod 755 %REMOTE_SH%; rm -f %REMOTE_TMP%'" >nul 2>&1
+)
 %ADB% shell "su -c 'chmod 755 %REMOTE_SH%'" >nul 2>&1
 
 echo [3/6] Jalankan setup di HP sebagai root...
@@ -132,7 +142,7 @@ if defined IF echo Antarmuka terdeteksi: %IF%
 set /a TRY=0
 :verify
 if defined IF (
-  %ADB% shell "ip -o addr show dev %IF% 2>nul" | findstr /c:"192.168.137." >nul
+  %ADB% shell "ip -o addr show dev %IF% 2>/dev/null" | findstr /c:"192.168.137." >nul
 ) else (
   %ADB% shell "ip -o addr show" | findstr /c:"192.168.137." >nul
 )

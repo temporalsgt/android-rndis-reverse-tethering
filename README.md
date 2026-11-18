@@ -267,6 +267,7 @@ Setelah itu cabut kabel atau reboot HP agar USB kembali ke mode ADB normal.
 | `tools/ics.ps1` | Sisi PC: aktifkan/nonaktifkan ICS dengan deteksi adapter otomatis |
 | `tools/usb_status.ps1` | Mesin pemeriksa status USB yang dipanggil `check-usb.cmd` |
 | `tools/usb_status_termux.sh` | Versi bash dijalankan **di HP lewat Termux** |
+| `tools/reset_usb_termux.sh` | Reset gadget USB ke mode ADB dari Termux (butuh root) |
 | `docs/TECHNICAL.md` | Penjelasan mekanisme, kompatibilitas, dan batasan |
 
 ### Penjelasan tiga file CMD
@@ -413,6 +414,14 @@ adb shell getprop persist.sys.usb.config
 
 Nilai bawaan adalah `adb`. Bila pernah diubah manual menjadi `mtp,adb` dan ingin
 kembali persis seperti semula, set kembali ke `adb` lalu reboot HP.
+
+Kalau ADB sudah tidak bisa dipakai sama sekali, jalankan **dari HP lewat Termux**:
+
+```sh
+bash tools/reset_usb_termux.sh
+```
+
+Lalu cabut–pasang kabel atau reboot HP, lalu cek lagi `adb devices` dari PC.
 
 **"fungsi RNDIS/ADB tidak ditemukan"**
 Lihat daftar fungsi di log. ROM harus punya fungsi bertema `rndis`. Beberapa ROM
