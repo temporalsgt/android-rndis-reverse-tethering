@@ -132,6 +132,9 @@ fi
 
 log "gadget=$G"
 log "config=$B"
+# Simpan konfigurasi sebelum diubah, dipakai usb_reset_gadget.sh saat restore.
+KONFIG_AWAL=$(cat "$B/strings/0x409/configuration" 2>/dev/null)
+log "konfigurasi_awal=$KONFIG_AWAL"
 log "rndis_fn=$RNDIS_FN"
 log "adb_fn=$ADB_FN"
 log "udc=$UDC"

@@ -251,8 +251,10 @@ Setelah itu cabut kabel atau reboot HP agar USB kembali ke mode ADB normal.
 > Setelah `restore-default.cmd`, **cabut kabel atau reboot HP** agar komposisi gadget
 > kembali ke `adb` dan Anda bisa memilih MTP/PTP/MIDI lagi dari notifikasi USB HP.
 >
-> `restore-default.cmd` saat ini **belum** melakukan reset gadget secara aktif; reboot
-> masih merupakan cara paling aman untuk memulihkan seluruh fungsi USB.
+> `restore-default.cmd` kini **melakukan** reset gadget secara aktif lewat
+> `tools/usb_reset_gadget.sh`: symlink RNDIS dihapus, string konfigurasi dikembalikan
+> ke nilai awal, lalu UDC di-re-bind. Cabut kabel atau reboot tetap disarankan bila
+> MTP/PTP/MIDI belum muncul.
 
 ---
 
@@ -264,6 +266,7 @@ Setelah itu cabut kabel atau reboot HP agar USB kembali ke mode ADB normal.
 | `restore-default.cmd` | Kembalikan kondisi awal |
 | `check-usb.cmd` | Cek kondisi USB (Windows + HP) + kesimpulan mode |
 | `tools/rndis_setup.sh` | Sisi HP: deteksi gadget/UDC/fungsi, rebind, rename, tunggu DHCP |
+| `tools/usb_reset_gadget.sh` | Sisi HP: kembalikan gadget dari RNDIS ke konfigurasi awal saat restore |
 | `tools/ics.ps1` | Sisi PC: aktifkan/nonaktifkan ICS dengan deteksi adapter otomatis |
 | `tools/usb_status.ps1` | Mesin pemeriksa status USB yang dipanggil `check-usb.cmd` |
 | `tools/usb_status_termux.sh` | Versi bash dijalankan **di HP lewat Termux** |
@@ -308,13 +311,14 @@ Dijalankan setelah selesai memakai tethering. Juga mencari ADB & serial seperti 
 | Tahap | Apa yang dilakukan |
 |---|---|
 | `[1/3]` | Panggil `ics.ps1 -Action Disable` untuk mematikan ICS |
-| `[2/3]` | Turunkan antarmuka RNDIS di HP — nama dibaca dari `rndis_setup.log`; kalau log tidak ada, coba daftar nama umum |
-| `[3/3]` | Hapus script/log sementara di HP |
+| `[2/4]` | Turunkan antarmuka RNDIS di HP — nama dibaca dari `rndis_setup.log`; kalau log tidak ada, coba daftar nama umum |
+| `[3/4]` | Reset gadget USB: push + jalankan `tools/usb_reset_gadget.sh` — hapus symlink RNDIS, kembalikan string konfigurasi dari `konfigurasi_awal=` di log, lalu re-bind UDC |
+| `[4/4]` | Hapus script/log sementara di HP |
 
 **Sengaja tidak dilakukan:** mematikan permanen service `SharedAccess`, mengubah data
-seluler, atau memaksa mode USB. Karena itu, setelah menjalankan ini Anda tetap perlu
-**cabut kabel atau reboot HP** supaya komposisi gadget kembali ke `adb` dan MTP/PTP/MIDI
-bisa dipakai lagi.
+seluler, atau mengubah `persist.sys.usb.config`. Komposisi gadget **sengaja dikembalikan**
+secara aktif oleh `usb_reset_gadget.sh`. Cabut kabel atau reboot HP tetap disarankan bila
+MTP/PTP/MIDI belum langsung muncul.
 
 Contoh:
 

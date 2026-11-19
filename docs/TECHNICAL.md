@@ -162,10 +162,12 @@ Tidak menyentuh `/system`, `/vendor`, sepolicy, `build.prop`, atau modul root.
 Karena configfs disusun ulang menjadi RNDIS + ADB, **MTP/PTP/MIDI dan USB tethering
 bawaan Android tidak aktif** selama sesi. Ini konsekuensi metode, bukan bug.
 
-`restore-default.cmd` mematikan ICS dan menurunkan antarmuka, tetapi **tidak** mengubah
-kembali komposisi gadget secara aktif. Cara paling aman untuk memulihkan semua fungsi USB
-adalah **cabut kabel atau reboot HP**. Setelah itu `persist.sys.usb.config=adb`
-(mode bawaan) dipakai lagi dan MTP/PTP/MIDI bisa dipilih dari notifikasi USB.
+`restore-default.cmd` mematikan ICS, menurunkan antarmuka, lalu menjalankan
+`tools/usb_reset_gadget.sh` di HP untuk **mengubah kembali komposisi gadget secara aktif**:
+symlink fungsi RNDIS dihapus, string `configuration` dikembalikan ke nilai yang dicatat
+`rndis_setup.sh` di baris `konfigurasi_awal=` (fallback: `persist.sys.usb.config`), lalu
+UDC di-re-bind. Symlink ADB sengaja dipertahankan agar koneksi tidak hilang. Cabut kabel
+atau reboot HP tetap menjadi fallback bila MTP/PTP/MIDI belum muncul.
 
 **Catatan insiden audit.** Saat pengujian pernah ditambahkan handler ADB `offline`
 yang memanggil `Disable-PnpDevice` pada *ADB Interface* Windows. Ini membuat perangkat
