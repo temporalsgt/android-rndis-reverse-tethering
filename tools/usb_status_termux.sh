@@ -56,20 +56,29 @@ echo "fungsi aktif           : $FUNCS"
 
 # ---------------------------------------------------------------- configfs
 section "CONFIGFS GADGET"
-G=/config/usb_gadget/g1
-G_OK=$(run_root "[ -d $G ] && echo yes")
-if [ "$G_OK" = "yes" ]; then
-    UDC=$(run_root "cat $G/UDC")
-    CFG=$(run_root "cat $G/configs/b.1/strings/0x409/configuration")
-    VID=$(run_root "cat $G/idVendor")
-    PID=$(run_root "cat $G/idProduct")
+G=""
+for g in /config/usb_gadget/*; do
+    if [ -d "$g/configs" ] && [ -d "$g/functions" ]; then
+        G=$g
+        break
+    fi
+done
+UDC=""; CFG=""; VID=""; PID=""
+if [ -n "$G" ]; then
+    UDC=$(run_root "cat $G/UDC 2>/dev/null")
+    VID=$(run_root "cat $G/idVendor 2>/dev/null")
+    PID=$(run_root "cat $G/idProduct 2>/dev/null")
+    for c in "$G"/configs/*; do
+        [ -d "$c" ] || continue
+        CFG=$(run_root "cat $c/strings/0x409/configuration 2>/dev/null")
+        [ -n "$CFG" ] && break
+    done
     echo "gadget   : $G"
     echo "UDC      : ${UDC:-(tidak terbaca)}"
     echo "config   : ${CFG:-(tidak terbaca)}"
     echo "VID:PID  : ${VID:-?}:${PID:-?}"
 else
-    echo "configfs tidak ditemukan di $G"
-    UDC=""; CFG=""; VID=""; PID=""
+    echo "configfs tidak ditemukan di /config/usb_gadget/"
 fi
 
 # ---------------------------------------------------------------- antarmuka
@@ -136,8 +145,8 @@ HAS_RNDIS_CFG=0
 case "$ADDR" in
     192.168.137.*) HAS_IP=1 ;;
 esac
-case "$CFG$VID$PID" in
-    *rndis*|*05C6*|*05c6*|*9024*) HAS_RNDIS_CFG=1 ;;
+case "$CFG" in
+    *rndis*|*RNDIS*) HAS_RNDIS_CFG=1 ;;
 esac
 case "$CURRENT$PERSIST" in
     *rndis*) HAS_RNDIS_CFG=1 ;;

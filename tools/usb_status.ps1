@@ -130,7 +130,21 @@ else {
     foreach ($t in $tracked) { Write-Host "Ethernet terlacak: $($t.Trim())" -ForegroundColor Green }
 }
 
-$cfg = AdbSh "su -c 'cat /config/usb_gadget/g1/UDC; echo; cat /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration; echo; cat /config/usb_gadget/g1/idVendor; echo; cat /config/usb_gadget/g1/idProduct'"
+$cfgCmd = @'
+for g in /config/usb_gadget/*; do
+  [ -d "$g/configs" ] || continue
+  echo "gadget=$g"
+  echo "UDC=$(cat $g/UDC 2>/dev/null)"
+  for c in $g/configs/*; do
+    [ -d "$c" ] || continue
+    echo "config=$c"
+    echo "configuration=$(cat $c/strings/0x409/configuration 2>/dev/null)"
+  done
+  echo "idVendor=$(cat $g/idVendor 2>/dev/null)"
+  echo "idProduct=$(cat $g/idProduct 2>/dev/null)"
+done
+'@
+$cfg = AdbSh "su -c '$cfgCmd'"
 if ($cfg) { Write-Host "configfs (UDC/config/VID/PID):" ; Write-Host $cfg }
 
 $log = AdbSh 'cat /data/local/tmp/rndis_setup.log'
@@ -198,8 +212,9 @@ catch {
 
 # ---------------------------------------------------------------- KESIMPULAN
 Write-Head "KESIMPULAN"
-$vidpidText = ($pnp | ForEach-Object { if ($_.InstanceId -match 'VID_([0-9A-F]+)&PID_([0-9A-F]+)') { "$($Matches[1]):$($Matches[2])" } }) -join ','
-$hasRndisVid = $vidpidText -match '05C6|9024'
+# VID/PID tidak dipakai sebagai penentu RNDIS: banyak perangkat memakai
+# 05C6:9024 untuk ADB normal. Yang dipakai adalah string konfigurasi configfs.
+$hasRndisCfg = $cfg -match 'rndis'
 $hasRndisAdapter = $rndis.Count -gt 0
 $hasUsbIf = $usbLinks.Count -gt 0
 $hasIcsIp = $icsAddr.Count -gt 0
@@ -208,7 +223,7 @@ if ($hasRndisAdapter -and $hasUsbIf -and $hasIcsIp) {
     Write-Host "MODE RNDIS / reverse tethering SEDANG AKTIF." -ForegroundColor Green
     Write-Host "Gunakan restore-default.cmd lalu cabut/reboot HP untuk kembali normal."
 }
-elseif ($current -match 'rndis' -or $hasRndisVid -or $hasRndisAdapter) {
+elseif ($current -match 'rndis' -or $hasRndisCfg -or $hasRndisAdapter) {
     Write-Host "KONDISI TRANSISI: ada jejak RNDIS tapi belum aktif penuh." -ForegroundColor Yellow
     Write-Host "Cek log HP / ICS, atau jalankan ulang rndis-tethering.cmd."
 }
